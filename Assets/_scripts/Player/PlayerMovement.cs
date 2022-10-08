@@ -15,6 +15,8 @@ public class MovementProperties {
     public float runThreshold = 0.1f;
     public float sprintThreshold = 0.5f;
 
+    public float idleThreshold = 4f;
+
     public MovementProperties(){}
 }
 
@@ -35,39 +37,36 @@ public class PlayerMovement : MonoBehaviour
     float moveSpeed;
 
     bool canMove = true;
-    bool moving;
-   // bool walking;
-    bool running;
-    bool sprinting;
 
-    bool rolling;
-    bool backstepping;
-    bool backstepMoving;
+   // bool walking;
+    bool idling, moving, running, sprinting, rolling, backstepping, backstepMoving;
 
     float sprintTimer = 0;
+
+    float idleTimer = 0;
+
 
 
     void Awake(){
         m = new MovementProperties();
-       cameraT = Camera.main.gameObject.transform;
-       inputQueue = new List<string>();
-       rb = GetComponent<Rigidbody>();
+        cameraT = Camera.main.gameObject.transform;
+        inputQueue = new List<string>();
+        rb = GetComponent<Rigidbody>();
     }
 
     void LateUpdate() {
         moveInput = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
         moving = moveInput.magnitude > 0;
 
-        if(inputQueue.Count > 0){
-            CalculateInputLifeTime();
-            if(!InMiddleOfAction()) CheckQueueForInputs();
-        }
+        CheckQueue();
             
         if(!moving && Input.GetButtonDown("Backstep")) {
             if(InMiddleOfAction()) QueueInput("Backstep");
             else StartBackStep();
         }
-        DetermineSprint();   
+        DetermineSprint();
+
+        CheckIdling();
     }
 
     void FixedUpdate() {
@@ -78,6 +77,20 @@ public class PlayerMovement : MonoBehaviour
         Rotate();
     }
 
+    void CheckIdling(){
+        if(!idling && !Input.anyKeyDown && moveInput.magnitude == 0) {
+            idleTimer += Time.deltaTime;
+            if(idleTimer > m.idleThreshold) {
+                idling = true;
+                animator.SetBool("Idling", true);
+            }
+        }
+        else if(idling && Input.anyKeyDown || moveInput.magnitude > 0){
+            idling = false;
+            animator.SetBool("Idling", false);
+            idleTimer = 0;
+        }
+    }
 
     //invoked from animation event
     public void CanMove(int toggle){
@@ -93,6 +106,13 @@ public class PlayerMovement : MonoBehaviour
         if(rolling) return true;
         if(backstepping) return true;
         return false;
+    }
+    
+    void CheckQueue(){
+        if(inputQueue.Count > 0){
+            CalculateInputLifeTime();
+            if(!InMiddleOfAction()) CheckQueueForInputs();
+        }
     }
 
     void QueueInput(string input){
