@@ -22,15 +22,24 @@ public class PlayerMovement : MonoBehaviour
 {
     MovementProperties m;
     public Animator animator;
+    Rigidbody rb;
     public Transform cameraT;
     Vector3 moveDir;
-    Vector2 input;
+    Vector2 moveInput;
+    Quaternion lookRot;
+
+    List<string> inputQueue;
+    float inputLifeTime = .5f;
+    float inputTimer = 0;
 
     float moveSpeed;
+
+    bool canMove = true;
     bool moving;
    // bool walking;
     bool running;
     bool sprinting;
+
     bool rolling;
     bool backstepping;
     bool backstepMoving;
@@ -41,32 +50,94 @@ public class PlayerMovement : MonoBehaviour
     void Awake(){
         m = new MovementProperties();
        cameraT = Camera.main.gameObject.transform;
+       inputQueue = new List<string>();
+       rb = GetComponent<Rigidbody>();
     }
 
     void LateUpdate() {
-        input = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
-        moving = input.magnitude > 0;
-        if(!moving && !rolling && Input.GetButtonDown("Roll")) BackStep();
-        DetermineSprint();
-        
+        moveInput = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
+        moving = moveInput.magnitude > 0;
+
+        if(inputQueue.Count > 0){
+            CalculateInputLifeTime();
+            if(!InMiddleOfAction()) CheckQueueForInputs();
+        }
+            
+        if(!moving && Input.GetButtonDown("Backstep")) {
+            if(InMiddleOfAction()) QueueInput("Backstep");
+            else StartBackStep();
+        }
+        DetermineSprint();   
     }
 
     void FixedUpdate() {
         if      (rolling)      ForcedRollMovement();
         else if (backstepping && backstepMoving) ForcedBackStepMovement();
-        else Move();
+
+        if(canMove) Move();
+        Rotate();
     }
 
-    void Move(){
-        moveDir = (cameraT.right*input.x) + (Vector3.Cross(cameraT.right, Vector3.up) * input.y).normalized;
 
-        if(moveDir.magnitude != 0) { 
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(moveDir), m.turnSpeed * Time.deltaTime);
-            transform.position += transform.forward * moveSpeed * Time.deltaTime;
+    //invoked from animation event
+    public void CanMove(int toggle){
+        canMove = toggle > 0;
+    }
+
+
+    bool InMiddleOfAction(){
+        if(rolling || backstepping){
+            Debug.Log("isrolling " + rolling);
+            Debug.Log("isbackstepping " + backstepping);
         }
-        
-        DetermineMoveSpeed(input);
+        if(rolling) return true;
+        if(backstepping) return true;
+        return false;
     }
+
+    void QueueInput(string input){
+        inputQueue.Add(input);
+        Debug.Log("queued input " + input);
+    }
+
+
+    void CheckQueueForInputs(){
+        if(inputQueue.Count > 0){
+            string nextAction = inputQueue[0];
+            Debug.Log("nextaction will be " + nextAction);
+            if(nextAction == "Roll") {
+                if(moveInput.magnitude == 0) nextAction = "Backstep";
+                else StartRoll();
+            }
+            if(nextAction == "Backstep") StartBackStep();
+            inputQueue.Clear();
+        }
+    }
+
+    void CalculateInputLifeTime(){
+        if(inputTimer < inputLifeTime) inputTimer += Time.deltaTime;
+        else if(inputTimer > inputLifeTime) {   
+            inputQueue.Clear();
+            inputTimer = 0;
+        }
+    }
+
+
+  
+    void Move(){
+        moveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y).normalized;
+        transform.position += moveInput.magnitude * transform.forward * moveSpeed * Time.deltaTime;
+        DetermineMoveSpeed(moveInput);
+    }
+
+    void Rotate(){
+        if(rb.velocity.magnitude > 0) lookRot = Quaternion.LookRotation(rb.velocity); 
+        if(moveDir.magnitude <= 0) lookRot = Quaternion.LookRotation(transform.forward);
+        else lookRot = Quaternion.LookRotation(moveDir);
+
+        transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, m.turnSpeed * Time.deltaTime);
+    }
+
 
     void DetermineSprint(){
         if(!moving) return;
@@ -74,7 +145,8 @@ public class PlayerMovement : MonoBehaviour
         
         if(sprintTimer < m.sprintThreshold && Input.GetButtonUp("Roll")) {
             sprintTimer = 0;
-            StartRoll();
+            if(InMiddleOfAction()) QueueInput("Roll");
+            else StartRoll();
         }
         if(sprintTimer >= m.sprintThreshold) {
             sprinting = Input.GetButton("Sprint");
@@ -85,13 +157,15 @@ public class PlayerMovement : MonoBehaviour
     //////////////////////////////////////////
     // Backstepping
 
-    void BackStep(){
-        if(backstepping) return;
+    void StartBackStep(){
         backstepping = true;
+        canMove = false;
         moveSpeed = m.backstepSpeed;
         animator.SetTrigger("Backstep");
     }
 
+    //Invoked from animation event
+    //CHANGE SPEED INTO A CURVE
     void StartBackStepMovement(){
         backstepMoving = true;
     }
@@ -102,6 +176,8 @@ public class PlayerMovement : MonoBehaviour
         moveSpeed = 0;
     }
 
+    //Invoked from animation event
+    //CHANGE SPEED INTO A CURVE
     void EndBackStep(){
         backstepping = false;
         backstepMoving = false;
@@ -115,7 +191,7 @@ public class PlayerMovement : MonoBehaviour
     // ROLLING
 
     void StartRoll(){
-        if(rolling) return;
+        canMove = false;
         rolling = true;
         moveSpeed = m.rollSpeed;
         animator.SetTrigger("Roll");
