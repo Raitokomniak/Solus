@@ -7,39 +7,38 @@ public class CameraMovement : MonoBehaviour
     public Transform player;
     Vector3 offSet;
 
-    Vector3 defaultPos;
-    Quaternion defaultRot;
-
     Quaternion targetRot;
     float rotationX;
     float rotationY;
 
 
-    bool debug;
-
     void Awake(){
         offSet = new Vector3(0,-1.5f,3);
-        defaultPos = transform.position;
-        defaultRot = transform.rotation;
     }
 
     void LateUpdate(){
         if(Input.GetButtonDown("Target")) Center();
+    
+        FollowAxes();
+        FollowPlayer();
+    }
 
+    void FollowAxes(){
         rotationX -= Input.GetAxis("Mouse Y");
         rotationX = Mathf.Clamp(rotationX, -25, 45);
         rotationY += Input.GetAxis("Mouse X");
+    }
 
+    void FollowPlayer(){
         targetRot = Quaternion.Euler(rotationX, rotationY, 0);
         transform.rotation = targetRot;
         transform.position = player.position  - targetRot * offSet;
     }
 
+    //Centers camera behind player
     void Center(){
         rotationX = 0;
         rotationY = player.rotation.eulerAngles.y;
-        targetRot = Quaternion.Euler(rotationX, rotationY, 0);
-        transform.rotation = targetRot;
-        transform.position = player.position - targetRot * offSet;
+        FollowPlayer();
     }
 }
