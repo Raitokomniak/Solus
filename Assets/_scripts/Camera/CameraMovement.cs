@@ -12,7 +12,7 @@ public class CameraMovement : MonoBehaviour
     float rotationY;
 
     Transform target;
-    bool targeting;
+    public bool targeting;
 
     bool camlocked;
     float tempz;
@@ -28,15 +28,11 @@ public class CameraMovement : MonoBehaviour
             else if(targeting) ReleaseTarget();
         }
 
-        
-        if(!targeting){
+        if(targeting) FollowTarget();
+        else {
             FollowPlayer();
             FollowAxes();
         }
-        else {
-            FollowTarget();
-        }
-        
     }
 
     void FollowAxes(){
@@ -90,7 +86,10 @@ public class CameraMovement : MonoBehaviour
     public void ReleaseTarget(){
         targeting = false;
         Game.control.player.movement.TargetEnemy(false, null);
-        Vector3 camDistanceVector = transform.position - target.position;
+        Vector3 camDistanceVector = Vector3.zero;
+        if(target != null) {
+            camDistanceVector = transform.position - target.position;
+        }
         targetRot = Quaternion.LookRotation(camDistanceVector.normalized);
         transform.rotation = targetRot;
         Debug.Log("release target");

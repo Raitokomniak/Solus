@@ -5,98 +5,118 @@ using UnityEngine;
 //A small class to contain player properties
 public class MovementProperties {
 
-    public float walkSpeed = 1.5f;
+    public float walkSpeed = 2f;
     public float runSpeed = 5f;
     public float sprintSpeed = 10f;
     public float turnSpeed = 15f;
-    public float rollSpeed = 9f;
+    public float rollSpeed = 8.5f;
     public float backstepSpeed = 6f;
     
     public float runThreshold = 0.1f;
-    public float sprintThreshold = 0.5f;
 
-    public float idleThreshold = 4f;
 
     public MovementProperties(){}
 }
 
+
 public class PlayerMovement : MonoBehaviour
 {
+    InputQueueing inputQ;
+
     MovementProperties m;
-    public Animator animator;
-    Rigidbody rb;
+
     public Transform cameraT;
     public Transform strafeTarget;
 
     Vector3 moveDir;
     Vector2 moveInput;
+    float moveSpeed;
     Quaternion lookRot;
 
-    List<string> inputQueue;
-    float inputLifeTime = .5f;
-    float inputTimer = 0;
-
-    float moveSpeed;
-
-    bool canMove = true;
-
-   // bool walking;
-    bool idling, moving, running, sprinting, rolling, backstepping, backstepMoving, strafing, strafeRoll;
-
-    float sprintTimer = 0;
-
-    float idleTimer = 0;
+    public bool canMove, idling, moving, running, sprinting, rolling, backstepping, backstepMoving, strafing, strafeRoll;
 
     Vector3 rollMoveDir;
+    Timer rollTimer;
 
-    float rollLifeTime = 1.5f;
-    float rollTimer;
+    Timer sprintTimer;
+    Timer idleTimer;
 
 
+    bool grounded;
 
     void Awake(){
         m = new MovementProperties();
         cameraT = Camera.main.gameObject.transform;
-        inputQueue = new List<string>();
-        rb = GetComponent<Rigidbody>();
+        
+        rollTimer = new Timer(1.5f);
+        sprintTimer = new Timer(0.5f);
+        idleTimer = new Timer(4f);
+
+        inputQ = GetComponent<InputQueueing>();
+        canMove = true;
     }
+
+    //////////////////////////////////////////
+    // UPDATES
+    //////////////////////////////////////////
 
     void LateUpdate() {
         moveInput = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
         moving = moveInput.magnitude > 0;
 
-        CheckQueue();
-            
+        CheckNextAction();
+        DetermineSprint();
+        CheckIdling();
+
+        Game.control.player.Animate("Running", moveInput.magnitude > 0);
+        
+        if(rolling) RollFailSafe();
+        if(!rolling && !backstepMoving) canMove = true;
+
+        /*
         if(!moving && Input.GetButtonDown("Backstep")) {
             if(InMiddleOfAction()) QueueInput("Backstep");
             else StartBackStep();
         }
-        DetermineSprint();
-
-        CheckIdling();
+        */
     }
 
     void FixedUpdate() {
+        
         if      (rolling)      ForcedRollMovement();
         else if (backstepping && backstepMoving) ForcedBackStepMovement();
 
         if (!strafing) {
-            if(canMove) Move();
+            if(CanMove()) Move();
             Rotate();
         }
-        else {
-            Strafe();
+        else Strafe();
+
+
+        if(moveInput.magnitude == 0) Game.control.player.rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
+        else Game.control.player.rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+    }
+
+    //////////////////////////////////////////
+    // BASICS
+    //////////////////////////////////////////
+
+    void CheckNextAction(){
+        string nextAction = inputQ.CheckQueue();
+        if(nextAction == "Roll") {
+            if(moveInput.magnitude == 0) nextAction = "Backstep";
+            else StartRoll();
         }
-
-         
+        if(nextAction == "Backstep") StartBackStep();
     }
 
-    void Update(){
-        animator.SetBool("Running", moveInput.magnitude > 0);
-        if(rolling) RollFailSafe();
+    bool CanMove(){
+        if(strafing) return false;
+        if(rolling) return false;
+        if(Game.control.player.attack.restrictedMovement) return false;
+        return true;
     }
 
-    
     void Move(){
         moveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y).normalized;
         transform.position += moveInput.magnitude * transform.forward * moveSpeed * Time.deltaTime;
@@ -104,16 +124,63 @@ public class PlayerMovement : MonoBehaviour
     }
 
     void Rotate(){
-        if(rb.velocity != Vector3.zero && rb.velocity.magnitude > 0) lookRot = Quaternion.LookRotation(rb.velocity); 
+        if(Game.control.player.rb.velocity != Vector3.zero && Game.control.player.rb.velocity.magnitude > 0) lookRot = Quaternion.LookRotation(Game.control.player.rb.velocity); 
         if(moveDir.magnitude <= 0) lookRot = Quaternion.LookRotation(transform.forward);
         else lookRot = Quaternion.LookRotation(moveDir);
 
         transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, m.turnSpeed * Time.deltaTime);
     }
 
+    
+    void DetermineSprint(){
+        if(!moving) return;
+        if(!sprinting && Input.GetButton("Sprint")) sprintTimer.Tick();
+        
+        if(!sprintTimer.TimeOut() && Input.GetButtonUp("Roll")) {
+            sprintTimer.Reset();
+            if(inputQ.InMiddleOfAction()) inputQ.QueueInput("Roll");
+            else StartRoll();
+        }
+        if(sprintTimer.TimeOut()) {
+            sprinting = Input.GetButton("Sprint");
+            if(!sprinting) sprintTimer.Reset();
+        }
+    }
+
+    void DetermineMoveSpeed(){
+        float speed = moveInput.magnitude;
+   //     walking = speed > 0 && speed < m.runThreshold;
+        running = speed >= m.runThreshold;
+
+     //   if(walking) moveSpeed = m.walkSpeed;
+        if(running) moveSpeed = m.runSpeed;
+        if(sprinting) moveSpeed = m.sprintSpeed;
+      
+     //   animator.SetBool("Walking", walking);
+     
+        Game.control.player.Animate("Running", running);
+        Game.control.player.Animate("Sprinting", sprinting);
+    }
+
+
+    //////////////////////////////////////////
+    // TARGETING
+    //////////////////////////////////////////
+
+    public void TargetEnemy(bool toggle, Transform target){
+        strafing = toggle;
+        strafeTarget = target;
+        if(toggle) Game.control.player.Animate("StartStrafe");
+        Game.control.player.Animate("StrafeI", toggle);
+        Game.control.player.Animate("Running", false);
+        if(!toggle) Game.control.player.Animate("StrafeI", false);
+        if(!toggle) Game.control.player.Animate("EndStrafe");
+    }
+
     void Strafe(){
         moveInput = moveInput.normalized;
         moveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y).normalized;
+        if(strafeTarget == null) return;
         Vector3 vectorToTarget = transform.position - strafeTarget.position;
         Quaternion targetRot = Quaternion.LookRotation(strafeTarget.position - transform.position);
         transform.position += targetRot * new Vector3(moveInput.x, 0, moveInput.y) * moveSpeed * Time.deltaTime;
@@ -123,10 +190,10 @@ public class PlayerMovement : MonoBehaviour
 
         //DetermineMoveSpeed();
 
-        animator.SetBool("StrafeR", moveInput.x > 0);
-        animator.SetBool("StrafeL", moveInput.x < 0);
-        animator.SetBool("StrafeB", moveInput.y < 0);
-        animator.SetBool("StrafeF", moveInput.y > 0);
+        Game.control.player.Animate("StrafeR", moveInput.x > 0);
+        Game.control.player.Animate("StrafeL", moveInput.x < 0);
+        Game.control.player.Animate("StrafeB", moveInput.y < 0);
+        Game.control.player.Animate("StrafeF", moveInput.y > 0);
         
         if(!rolling && !backstepping){
             if(moveInput.y < 0) moveSpeed = m.walkSpeed;
@@ -137,16 +204,16 @@ public class PlayerMovement : MonoBehaviour
 
     void CheckIdling(){
         if(!idling && !Input.anyKeyDown && moveInput.magnitude == 0) {
-            idleTimer += Time.deltaTime;
-            if(idleTimer > m.idleThreshold) {
+            idleTimer.Tick();
+            if(idleTimer.TimeOut()) {
                 idling = true;
-                animator.SetBool("Idling", true);
+                Game.control.player.Animate("Idling", true);
             }
         }
         else if(idling && Input.anyKeyDown || moveInput.magnitude > 0){
             idling = false;
-            animator.SetBool("Idling", false);
-            idleTimer = 0;
+            Game.control.player.Animate("Idling", false);
+            idleTimer.Reset();
         }
     }
 
@@ -155,82 +222,17 @@ public class PlayerMovement : MonoBehaviour
         canMove = toggle > 0;
     }
 
-
-    bool InMiddleOfAction(){
-        if(rolling) return true;
-        if(backstepping) return true;
-        return false;
-    }
     
-    void CheckQueue(){
-        if(inputQueue.Count > 0){
-            CalculateInputLifeTime();
-            if(!InMiddleOfAction()) CheckQueueForInputs();
-        }
-    }
-
-    void QueueInput(string input){
-        inputQueue.Add(input);
-    }
-
-
-    void CheckQueueForInputs(){
-        if(inputQueue.Count > 0){
-            string nextAction = inputQueue[0];
-            if(nextAction == "Roll") {
-                if(moveInput.magnitude == 0) nextAction = "Backstep";
-                else StartRoll();
-            }
-            if(nextAction == "Backstep") StartBackStep();
-            inputQueue.Clear();
-        }
-    }
-
-    void CalculateInputLifeTime(){
-        if(inputTimer < inputLifeTime) inputTimer += Time.deltaTime;
-        else if(inputTimer > inputLifeTime) {   
-            inputQueue.Clear();
-            inputTimer = 0;
-        }
-    }
-
-
-
-
-    void DetermineSprint(){
-        if(!moving) return;
-        if(!sprinting && Input.GetButton("Sprint")) sprintTimer += Time.deltaTime;
-        
-        if(sprintTimer < m.sprintThreshold && Input.GetButtonUp("Roll")) {
-            sprintTimer = 0;
-            if(InMiddleOfAction()) QueueInput("Roll");
-            else StartRoll();
-        }
-        if(sprintTimer >= m.sprintThreshold) {
-            sprinting = Input.GetButton("Sprint");
-            if(!sprinting) sprintTimer = 0;
-        }
-    }
-
-    public void TargetEnemy(bool toggle, Transform target){
-        strafing = toggle;
-        strafeTarget = target;
-        if(toggle) animator.SetTrigger("StartStrafe");
-        animator.SetBool("StrafeI", toggle);
-        animator.SetBool("Running", false);
-        if(!toggle) animator.SetBool("StrafeI", false);
-        if(!toggle) animator.SetTrigger("EndStrafe");
-    }
-
 
     //////////////////////////////////////////
-    // Backstepping
+    // BACKSTEP
+    //////////////////////////////////////////
 
     void StartBackStep(){
         backstepping = true;
         canMove = false;
         moveSpeed = m.backstepSpeed;
-        animator.SetTrigger("Backstep");
+        Game.control.player.Animate("Backstep");
     }
 
     //Invoked from animation event
@@ -255,17 +257,19 @@ public class PlayerMovement : MonoBehaviour
         transform.position -= transform.forward * moveSpeed * Time.deltaTime;
     }
 
+    
     //////////////////////////////////////////
     // ROLLING
+    //////////////////////////////////////////
 
     void StartRoll(){
         strafeRoll = strafing;
         strafing = false;
-        rollTimer = 0;
+        rollTimer.Reset();
         canMove = false;
         rolling = true;
         moveSpeed = m.rollSpeed;
-        animator.SetTrigger("Roll");
+        Game.control.player.Animate("Roll");
         rollMoveDir = moveDir;
     }
     
@@ -289,29 +293,31 @@ public class PlayerMovement : MonoBehaviour
     public void EndRoll(){
         rolling = false;
         rollMoveDir = Vector3.zero;
-        rollTimer = 0;
+        rollTimer.Reset();
         if(strafeRoll) {
             strafing = true;
+            strafeRoll = false;
         }
     }
 
     void RollFailSafe(){
-        rollTimer+= Time.deltaTime;
-        if(rollTimer > rollLifeTime) EndRoll();
+        rollTimer.Tick();
+        if(rollTimer.TimeOut()) EndRoll();
     }
 
-    void DetermineMoveSpeed(){
-        float speed = moveInput.magnitude;
-   //     walking = speed > 0 && speed < m.runThreshold;
-        running = speed >= m.runThreshold;
+    ///////////////////////////////////
 
-     //   if(walking) moveSpeed = m.walkSpeed;
-        if(running) moveSpeed = m.runSpeed;
-        if(sprinting) moveSpeed = m.sprintSpeed;
-      
-     //   animator.SetBool("Walking", walking);
-     
-        animator.SetBool("Running", running);
-        animator.SetBool("Sprinting", sprinting);
+    public void StartLightAttackMovement(){
+        moveSpeed = 0;
+        canMove = false;
     }
+    
+
+
+    /* not sure if good design
+    public bool ReleaseCam(){
+        if(strafeRoll) return true;
+        return false;
+    }
+    */
 }
