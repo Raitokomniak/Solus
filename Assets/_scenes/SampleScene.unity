@@ -581,6 +581,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   animator: {fileID: 1307199923}
   cameraT: {fileID: 963194228}
+  strafeTarget: {fileID: 0}
 --- !u!4 &1307199925 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 957bc77cd1fab154c915b18ae8cedf47, type: 3}
@@ -660,6 +661,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   player: {fileID: 0}
+  cam: {fileID: 0}
 --- !u!4 &1878959624
 Transform:
   m_ObjectHideFlags: 0

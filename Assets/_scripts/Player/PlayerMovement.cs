@@ -5,7 +5,7 @@ using UnityEngine;
 //A small class to contain player properties
 public class MovementProperties {
 
-    public float walkSpeed = 2f;
+    public float walkSpeed = 1f;
     public float runSpeed = 5f;
     public float sprintSpeed = 10f;
     public float turnSpeed = 15f;
@@ -26,6 +26,8 @@ public class PlayerMovement : MonoBehaviour
     public Animator animator;
     Rigidbody rb;
     public Transform cameraT;
+    public Transform strafeTarget;
+
     Vector3 moveDir;
     Vector2 moveInput;
     Quaternion lookRot;
@@ -44,6 +46,8 @@ public class PlayerMovement : MonoBehaviour
     float sprintTimer = 0;
 
     float idleTimer = 0;
+
+
 
 
 
@@ -73,20 +77,22 @@ public class PlayerMovement : MonoBehaviour
         if      (rolling)      ForcedRollMovement();
         else if (backstepping && backstepMoving) ForcedBackStepMovement();
 
-        //(!strafing) {
+        if (!strafing) {
             if(canMove) Move();
             Rotate();
-       /* }
+        }
         else {
             Strafe();
-        }*/
+        }
+
+         
     }
 
     
     void Move(){
         moveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y).normalized;
         transform.position += moveInput.magnitude * transform.forward * moveSpeed * Time.deltaTime;
-        DetermineMoveSpeed(moveInput);
+        DetermineMoveSpeed();
     }
 
     void Rotate(){
@@ -98,10 +104,26 @@ public class PlayerMovement : MonoBehaviour
     }
 
     void Strafe(){
+        
         moveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y).normalized;
-       // transform.position += moveInput.x * transform.right * moveSpeed * Time.deltaTime;
-        transform.RotateAround(GameObject.FindWithTag("Enemy").transform.position, Vector3.up, Time.deltaTime * moveInput.x);
-        DetermineMoveSpeed(moveInput);
+        Vector3 vectorToTarget = transform.position - strafeTarget.position;
+        Quaternion targetRot = Quaternion.LookRotation(strafeTarget.position - transform.position);
+        transform.position += targetRot * new Vector3(moveInput.x, 0, moveInput.y) * moveSpeed * Time.deltaTime;
+        transform.rotation = targetRot;
+        Vector3 correctedRot = new Vector3(0,transform.rotation.eulerAngles.y,0);
+        transform.rotation = Quaternion.Euler(correctedRot);
+
+        //DetermineMoveSpeed();
+
+        animator.SetBool("StrafeR", moveInput.x > 0);
+        animator.SetBool("StrafeL", moveInput.x < 0);
+        animator.SetBool("StrafeB", moveInput.y < 0);
+        animator.SetBool("StrafeF", moveInput.y > 0);
+        
+        if(!rolling && !backstepping){
+            if(moveInput.y < 0) moveSpeed = m.walkSpeed;
+            else moveSpeed = m.runSpeed;
+        }
     }
 
 
@@ -182,8 +204,13 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    public void TargetEnemy(bool toggle){
+    public void TargetEnemy(bool toggle, Transform target){
         strafing = toggle;
+        strafeTarget = target;
+        animator.SetBool("StrafeI", toggle);
+        if(toggle) animator.SetBool("Running", false);
+        if(!toggle) animator.SetBool("StrafeI", false);
+        if(!toggle) animator.SetTrigger("EndStrafe");
     }
 
 
@@ -247,8 +274,8 @@ public class PlayerMovement : MonoBehaviour
         rolling = false;
     }
 
-    void DetermineMoveSpeed(Vector2 input){
-        float speed = input.magnitude;
+    void DetermineMoveSpeed(){
+        float speed = moveInput.magnitude;
    //     walking = speed > 0 && speed < m.runThreshold;
         running = speed >= m.runThreshold;
 
@@ -257,6 +284,7 @@ public class PlayerMovement : MonoBehaviour
         if(sprinting) moveSpeed = m.sprintSpeed;
       
      //   animator.SetBool("Walking", walking);
+     
         animator.SetBool("Running", running);
         animator.SetBool("Sprinting", sprinting);
     }
