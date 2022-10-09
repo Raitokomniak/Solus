@@ -5,7 +5,7 @@ using UnityEngine;
 //A small class to contain player properties
 public class MovementProperties {
 
-    public float walkSpeed = 1f;
+    public float walkSpeed = 1.5f;
     public float runSpeed = 5f;
     public float sprintSpeed = 10f;
     public float turnSpeed = 15f;
@@ -41,13 +41,16 @@ public class PlayerMovement : MonoBehaviour
     bool canMove = true;
 
    // bool walking;
-    bool idling, moving, running, sprinting, rolling, backstepping, backstepMoving, strafing;
+    bool idling, moving, running, sprinting, rolling, backstepping, backstepMoving, strafing, strafeRoll;
 
     float sprintTimer = 0;
 
     float idleTimer = 0;
 
+    Vector3 rollMoveDir;
 
+    float rollLifeTime = 1.5f;
+    float rollTimer;
 
 
 
@@ -88,6 +91,11 @@ public class PlayerMovement : MonoBehaviour
          
     }
 
+    void Update(){
+        animator.SetBool("Running", moveInput.magnitude > 0);
+        if(rolling) RollFailSafe();
+    }
+
     
     void Move(){
         moveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y).normalized;
@@ -104,7 +112,7 @@ public class PlayerMovement : MonoBehaviour
     }
 
     void Strafe(){
-        
+        moveInput = moveInput.normalized;
         moveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y).normalized;
         Vector3 vectorToTarget = transform.position - strafeTarget.position;
         Quaternion targetRot = Quaternion.LookRotation(strafeTarget.position - transform.position);
@@ -207,8 +215,9 @@ public class PlayerMovement : MonoBehaviour
     public void TargetEnemy(bool toggle, Transform target){
         strafing = toggle;
         strafeTarget = target;
+        if(toggle) animator.SetTrigger("StartStrafe");
         animator.SetBool("StrafeI", toggle);
-        if(toggle) animator.SetBool("Running", false);
+        animator.SetBool("Running", false);
         if(!toggle) animator.SetBool("StrafeI", false);
         if(!toggle) animator.SetTrigger("EndStrafe");
     }
@@ -237,7 +246,6 @@ public class PlayerMovement : MonoBehaviour
     }
 
     //Invoked from animation event
-    //CHANGE SPEED INTO A CURVE
     void EndBackStep(){
         backstepping = false;
         backstepMoving = false;
@@ -251,27 +259,45 @@ public class PlayerMovement : MonoBehaviour
     // ROLLING
 
     void StartRoll(){
+        strafeRoll = strafing;
+        strafing = false;
+        rollTimer = 0;
         canMove = false;
         rolling = true;
         moveSpeed = m.rollSpeed;
         animator.SetTrigger("Roll");
+        rollMoveDir = moveDir;
     }
     
     void ForcedRollMovement(){
-        transform.position += transform.forward * moveSpeed * Time.deltaTime;
+       // transform.position += transform.forward * moveSpeed * Time.deltaTime;
+       transform.position += rollMoveDir * moveSpeed * Time.deltaTime;
+    }
+
+    void StrafeRollMovement(){
+        transform.position += rollMoveDir * moveSpeed * Time.deltaTime;
     }
     
 
     //Invoked from animation event
-    //CHANGE SPEED INTO A CURVE
     public void MidRoll(){
         moveSpeed = m.rollSpeed / 2;
+        
     }
 
     //Invoked from animationevent
-    //CHANGE SPEED INTO A CURVE
     public void EndRoll(){
         rolling = false;
+        rollMoveDir = Vector3.zero;
+        rollTimer = 0;
+        if(strafeRoll) {
+            strafing = true;
+        }
+    }
+
+    void RollFailSafe(){
+        rollTimer+= Time.deltaTime;
+        if(rollTimer > rollLifeTime) EndRoll();
     }
 
     void DetermineMoveSpeed(){
