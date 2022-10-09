@@ -39,7 +39,7 @@ public class PlayerMovement : MonoBehaviour
     bool canMove = true;
 
    // bool walking;
-    bool idling, moving, running, sprinting, rolling, backstepping, backstepMoving;
+    bool idling, moving, running, sprinting, rolling, backstepping, backstepMoving, strafing;
 
     float sprintTimer = 0;
 
@@ -73,9 +73,37 @@ public class PlayerMovement : MonoBehaviour
         if      (rolling)      ForcedRollMovement();
         else if (backstepping && backstepMoving) ForcedBackStepMovement();
 
-        if(canMove) Move();
-        Rotate();
+        //(!strafing) {
+            if(canMove) Move();
+            Rotate();
+       /* }
+        else {
+            Strafe();
+        }*/
     }
+
+    
+    void Move(){
+        moveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y).normalized;
+        transform.position += moveInput.magnitude * transform.forward * moveSpeed * Time.deltaTime;
+        DetermineMoveSpeed(moveInput);
+    }
+
+    void Rotate(){
+        if(rb.velocity != Vector3.zero && rb.velocity.magnitude > 0) lookRot = Quaternion.LookRotation(rb.velocity); 
+        if(moveDir.magnitude <= 0) lookRot = Quaternion.LookRotation(transform.forward);
+        else lookRot = Quaternion.LookRotation(moveDir);
+
+        transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, m.turnSpeed * Time.deltaTime);
+    }
+
+    void Strafe(){
+        moveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y).normalized;
+       // transform.position += moveInput.x * transform.right * moveSpeed * Time.deltaTime;
+        transform.RotateAround(GameObject.FindWithTag("Enemy").transform.position, Vector3.up, Time.deltaTime * moveInput.x);
+        DetermineMoveSpeed(moveInput);
+    }
+
 
     void CheckIdling(){
         if(!idling && !Input.anyKeyDown && moveInput.magnitude == 0) {
@@ -99,10 +127,6 @@ public class PlayerMovement : MonoBehaviour
 
 
     bool InMiddleOfAction(){
-        if(rolling || backstepping){
-            Debug.Log("isrolling " + rolling);
-            Debug.Log("isbackstepping " + backstepping);
-        }
         if(rolling) return true;
         if(backstepping) return true;
         return false;
@@ -117,14 +141,12 @@ public class PlayerMovement : MonoBehaviour
 
     void QueueInput(string input){
         inputQueue.Add(input);
-        Debug.Log("queued input " + input);
     }
 
 
     void CheckQueueForInputs(){
         if(inputQueue.Count > 0){
             string nextAction = inputQueue[0];
-            Debug.Log("nextaction will be " + nextAction);
             if(nextAction == "Roll") {
                 if(moveInput.magnitude == 0) nextAction = "Backstep";
                 else StartRoll();
@@ -143,20 +165,6 @@ public class PlayerMovement : MonoBehaviour
     }
 
 
-  
-    void Move(){
-        moveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y).normalized;
-        transform.position += moveInput.magnitude * transform.forward * moveSpeed * Time.deltaTime;
-        DetermineMoveSpeed(moveInput);
-    }
-
-    void Rotate(){
-        if(rb.velocity.magnitude > 0) lookRot = Quaternion.LookRotation(rb.velocity); 
-        if(moveDir.magnitude <= 0) lookRot = Quaternion.LookRotation(transform.forward);
-        else lookRot = Quaternion.LookRotation(moveDir);
-
-        transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, m.turnSpeed * Time.deltaTime);
-    }
 
 
     void DetermineSprint(){
@@ -173,6 +181,11 @@ public class PlayerMovement : MonoBehaviour
             if(!sprinting) sprintTimer = 0;
         }
     }
+
+    public void TargetEnemy(bool toggle){
+        strafing = toggle;
+    }
+
 
     //////////////////////////////////////////
     // Backstepping
