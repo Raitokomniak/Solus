@@ -4,15 +4,13 @@ using UnityEngine;
 
 public class GroundDetect : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
-    {
-        
+    public bool grounded;
+
+    private void OnTriggerEnter(Collider other) {
+        if(other.tag == "Ground") grounded = true;
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
+    private void OnTriggerExit(Collider other) {
+        if(other.tag == "Ground") grounded = false;
     }
 }

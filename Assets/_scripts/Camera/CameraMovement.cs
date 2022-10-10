@@ -79,19 +79,18 @@ public class CameraMovement : MonoBehaviour
     void TargetEnemy(Transform enemy){
         targeting = true;
         target = enemy;
-        Game.control.player.movement.TargetEnemy(true, enemy);
+        Game.control.player.movement.TargetEnemy(enemy);
         Debug.Log("target");
     }
 
     public void ReleaseTarget(){
         targeting = false;
-        Game.control.player.movement.TargetEnemy(false, null);
+        Game.control.player.movement.ReleaseTarget();
         Vector3 camDistanceVector = Vector3.zero;
         if(target != null) {
             camDistanceVector = transform.position - target.position;
         }
         targetRot = Quaternion.LookRotation(camDistanceVector.normalized);
         transform.rotation = targetRot;
-        Debug.Log("release target");
     }
 }

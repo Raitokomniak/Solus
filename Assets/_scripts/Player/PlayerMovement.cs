@@ -25,6 +25,8 @@ public class PlayerMovement : MonoBehaviour
 
     MovementProperties m;
 
+    GroundDetect groundDetect;
+
     public Transform cameraT;
     public Transform strafeTarget;
 
@@ -42,7 +44,6 @@ public class PlayerMovement : MonoBehaviour
     Timer idleTimer;
 
 
-    bool grounded;
 
     void Awake(){
         m = new MovementProperties();
@@ -63,7 +64,6 @@ public class PlayerMovement : MonoBehaviour
     void LateUpdate() {
         moveInput = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
         moving = moveInput.magnitude > 0;
-
         CheckNextAction();
         DetermineSprint();
         CheckIdling();
@@ -86,15 +86,18 @@ public class PlayerMovement : MonoBehaviour
         if      (rolling)      ForcedRollMovement();
         else if (backstepping && backstepMoving) ForcedBackStepMovement();
 
-        if (!strafing) {
-            if(CanMove()) Move();
-            Rotate();
-        }
-        else Strafe();
+        
+            
+        if (!CanStrafe()) {
+                if(CanMove()) Move();
+                
+            }
+            else if(CanStrafe()) Strafe();
 
+            
 
-        if(moveInput.magnitude == 0) Game.control.player.rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
-        else Game.control.player.rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        if(moveInput.magnitude == 0) Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
+        else Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
     }
 
     //////////////////////////////////////////
@@ -111,7 +114,8 @@ public class PlayerMovement : MonoBehaviour
     }
 
     bool CanMove(){
-        if(strafing) return false;
+//        Debug.Log("strafing " + strafing + " rolling " + rolling + " restricted " + Game.control.player.attack.restrictedMovement);
+        //if(strafing) return false;
         if(rolling) return false;
         if(Game.control.player.attack.restrictedMovement) return false;
         return true;
@@ -121,6 +125,7 @@ public class PlayerMovement : MonoBehaviour
         moveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y).normalized;
         transform.position += moveInput.magnitude * transform.forward * moveSpeed * Time.deltaTime;
         DetermineMoveSpeed();
+        Rotate();
     }
 
     void Rotate(){
@@ -129,6 +134,11 @@ public class PlayerMovement : MonoBehaviour
         else lookRot = Quaternion.LookRotation(moveDir);
 
         transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, m.turnSpeed * Time.deltaTime);
+    }
+
+    void CorrectRotationForRoll(){
+        moveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y).normalized;
+        transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(moveDir), m.turnSpeed);
     }
 
     
@@ -167,14 +177,40 @@ public class PlayerMovement : MonoBehaviour
     // TARGETING
     //////////////////////////////////////////
 
-    public void TargetEnemy(bool toggle, Transform target){
-        strafing = toggle;
+    bool CanStrafe(){
+        if(!Game.control.cam.targeting) return false;
+        if(rolling) return false;
+        return true;
+    }
+
+    public void ReleaseTarget(){
+        strafing = false;
+        IEnumerator waitroll = StrafeWaitForRoll(false);
+        StartCoroutine(waitroll);
+        
+    }
+
+    public void TargetEnemy(Transform target){
+        if(target!=null) transform.rotation = Quaternion.LookRotation(target.position);
+        strafing = true;
         strafeTarget = target;
-        if(toggle) Game.control.player.Animate("StartStrafe");
-        Game.control.player.Animate("StrafeI", toggle);
-        Game.control.player.Animate("Running", false);
-        if(!toggle) Game.control.player.Animate("StrafeI", false);
-        if(!toggle) Game.control.player.Animate("EndStrafe");
+        
+        IEnumerator waitroll = StrafeWaitForRoll(true);
+        StartCoroutine(waitroll);
+    }
+
+    IEnumerator StrafeWaitForRoll(bool tostrafe){
+        if(inputQ.InMiddleOfAction()){yield return new WaitUntil(() => rolling == false);}
+
+        if(tostrafe){
+            Game.control.player.Animate("StartStrafe");
+            Game.control.player.Animate("StrafeI", true);
+            Game.control.player.Animate("Running", false);
+        }
+        else {
+            Game.control.player.Animate("StrafeI", false);
+            Game.control.player.Animate("EndStrafe");
+        }
     }
 
     void Strafe(){
@@ -196,7 +232,7 @@ public class PlayerMovement : MonoBehaviour
         Game.control.player.Animate("StrafeF", moveInput.y > 0);
         
         if(!rolling && !backstepping){
-            if(moveInput.y < 0) moveSpeed = m.walkSpeed;
+            if(moveInput.y < 0 && moveInput.x == 0) moveSpeed = m.walkSpeed;
             else moveSpeed = m.runSpeed;
         }
     }
@@ -263,6 +299,7 @@ public class PlayerMovement : MonoBehaviour
     //////////////////////////////////////////
 
     void StartRoll(){
+        CorrectRotationForRoll();
         strafeRoll = strafing;
         strafing = false;
         rollTimer.Reset();

@@ -10,9 +10,6 @@ public class PlayerTargetingRange : MonoBehaviour
         enemiesInRange = new List<Collider>();
     }
 
-    void Update(){
-       
-    }
 
     private void OnTriggerEnter(Collider other) {
         if(other.tag == "Enemy"){
