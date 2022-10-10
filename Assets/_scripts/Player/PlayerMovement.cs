@@ -35,7 +35,7 @@ public class PlayerMovement : MonoBehaviour
     float moveSpeed;
     Quaternion lookRot;
 
-    public bool canMove, idling, moving, running, sprinting, rolling, backstepping, backstepMoving, strafing, strafeRoll;
+    public bool canMove, idling, moving, running, sprinting, rolling, backstepping, strafing, strafeRoll;
 
     Vector3 backstepMoveDir;
     Vector3 rollMoveDir;
@@ -72,7 +72,7 @@ public class PlayerMovement : MonoBehaviour
         Game.control.player.Animate("Running", moveInput.magnitude > 0);
         
         if(rolling) RollFailSafe();
-        if(!rolling && !backstepMoving) canMove = true;
+        if(!rolling && !backstepping) canMove = true;
 
         
         if(!moving && Input.GetButtonDown("Backstep")) {
@@ -85,17 +85,11 @@ public class PlayerMovement : MonoBehaviour
     void FixedUpdate() {
         
         if      (rolling)      ForcedRollMovement();
-        else if (backstepping && backstepMoving) ForcedBackStepMovement();
+        else if (backstepping) ForcedBackStepMovement();
 
-        
-            
-        if (!CanStrafe()) {
-                if(CanMove()) Move();
-                
-            }
-            else if(CanStrafe()) Strafe();
-
-            
+        if (!CanStrafe())
+            if(CanMove()) Move();
+         else Strafe();
 
         if(moveInput.magnitude == 0) Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
         else Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
@@ -115,8 +109,6 @@ public class PlayerMovement : MonoBehaviour
     }
 
     bool CanMove(){
-//        Debug.Log("strafing " + strafing + " rolling " + rolling + " restricted " + Game.control.player.attack.restrictedMovement);
-        //if(strafing) return false;
         if(rolling) return false;
         if(backstepping) return false;
         if(Game.control.player.attack.restrictedMovement) return false;
@@ -278,12 +270,6 @@ public class PlayerMovement : MonoBehaviour
 
     //Invoked from animation event
     //CHANGE SPEED INTO A CURVE
-    void StartBackStepMovement(){
-        backstepMoving = true;
-    }
-
-    //Invoked from animation event
-    //CHANGE SPEED INTO A CURVE
     void MidBackStep(){
         moveSpeed = 0;
     }
@@ -291,11 +277,14 @@ public class PlayerMovement : MonoBehaviour
     //Invoked from animation event
     void EndBackStep(){
         backstepping = false;
-        backstepMoving = false;
     }
     
     void ForcedBackStepMovement(){
-        
+       // AnimatorClipInfo[] currentClip = Game.control.player.animator.GetCurrentAnimatorClipInfo(0);
+       // currentClip.
+        //AnimationCurve speedCurve = UnityEditor.AnimationUtility.GetCurveBindings(currentClip.);
+       // float dSpeed = Game.control.player.animator.
+        moveSpeed = Game.control.player.animator.GetFloat("BackstepSpeed") * m.backstepSpeed;
         transform.position -= transform.forward * moveSpeed * Time.deltaTime;
     }
 
@@ -325,11 +314,6 @@ public class PlayerMovement : MonoBehaviour
        transform.position += rollMoveDir * moveSpeed * Time.deltaTime;
     }
 
-    void StrafeRollMovement(){
-        transform.position += rollMoveDir * moveSpeed * Time.deltaTime;
-    }
-    
-
     //Invoked from animation event
     public void MidRoll(){
         moveSpeed = m.rollSpeed / 2;
@@ -358,13 +342,4 @@ public class PlayerMovement : MonoBehaviour
         moveSpeed = 0;
         canMove = false;
     }
-    
-
-
-    /* not sure if good design
-    public bool ReleaseCam(){
-        if(strafeRoll) return true;
-        return false;
-    }
-    */
 }

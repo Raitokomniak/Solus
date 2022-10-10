@@ -81,7 +81,6 @@ public class CameraMovement : MonoBehaviour
         targeting = true;
         target = enemy;
         Game.control.player.movement.TargetEnemy(enemy);
-        Debug.Log("target");
     }
 
     public void ReleaseTarget(){
