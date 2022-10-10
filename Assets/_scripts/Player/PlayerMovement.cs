@@ -37,6 +37,7 @@ public class PlayerMovement : MonoBehaviour
 
     public bool canMove, idling, moving, running, sprinting, rolling, backstepping, backstepMoving, strafing, strafeRoll;
 
+    Vector3 backstepMoveDir;
     Vector3 rollMoveDir;
     Timer rollTimer;
 
@@ -73,12 +74,12 @@ public class PlayerMovement : MonoBehaviour
         if(rolling) RollFailSafe();
         if(!rolling && !backstepMoving) canMove = true;
 
-        /*
+        
         if(!moving && Input.GetButtonDown("Backstep")) {
-            if(InMiddleOfAction()) QueueInput("Backstep");
+            if(inputQ.InMiddleOfAction()) inputQ.QueueInput("Backstep");
             else StartBackStep();
         }
-        */
+        
     }
 
     void FixedUpdate() {
@@ -117,6 +118,7 @@ public class PlayerMovement : MonoBehaviour
 //        Debug.Log("strafing " + strafing + " rolling " + rolling + " restricted " + Game.control.player.attack.restrictedMovement);
         //if(strafing) return false;
         if(rolling) return false;
+        if(backstepping) return false;
         if(Game.control.player.attack.restrictedMovement) return false;
         return true;
     }
@@ -200,7 +202,10 @@ public class PlayerMovement : MonoBehaviour
     }
 
     IEnumerator StrafeWaitForRoll(bool tostrafe){
-        if(inputQ.InMiddleOfAction()){yield return new WaitUntil(() => rolling == false);}
+        if(inputQ.InMiddleOfAction()){
+            yield return new WaitUntil(() => rolling == false);
+            yield return new WaitUntil(() => backstepping == false);
+        }
 
         if(tostrafe){
             Game.control.player.Animate("StartStrafe");
@@ -290,6 +295,7 @@ public class PlayerMovement : MonoBehaviour
     }
     
     void ForcedBackStepMovement(){
+        
         transform.position -= transform.forward * moveSpeed * Time.deltaTime;
     }
 
@@ -307,11 +313,15 @@ public class PlayerMovement : MonoBehaviour
         rolling = true;
         moveSpeed = m.rollSpeed;
         Game.control.player.Animate("Roll");
-        rollMoveDir = moveDir;
+        
+        if(moveInput.x < 0) moveInput.x = -1;
+        if(moveInput.x > 0) moveInput.x = 1;
+        if(moveInput.y < 0) moveInput.y = -1;
+        if(moveInput.y > 0) moveInput.y = 1;
+        rollMoveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y).normalized;
     }
     
     void ForcedRollMovement(){
-       // transform.position += transform.forward * moveSpeed * Time.deltaTime;
        transform.position += rollMoveDir * moveSpeed * Time.deltaTime;
     }
 

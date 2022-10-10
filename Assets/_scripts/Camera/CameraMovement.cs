@@ -24,7 +24,8 @@ public class CameraMovement : MonoBehaviour
     void LateUpdate(){
         if(Input.GetButtonDown("Target")) {
             if(!targeting && Game.control.player.EnemiesInRange()) TargetEnemy(Game.control.player.targetingRange.GetClosestEnemy());
-            else if(!targeting && Game.control.player.EnemiesInRange()) Center();
+           // else if(!targeting && Game.control.player.EnemiesInRange()) Center();
+            else if(!targeting && !Game.control.player.EnemiesInRange()) Center();
             else if(targeting) ReleaseTarget();
         }
 
@@ -86,11 +87,6 @@ public class CameraMovement : MonoBehaviour
     public void ReleaseTarget(){
         targeting = false;
         Game.control.player.movement.ReleaseTarget();
-        Vector3 camDistanceVector = Vector3.zero;
-        if(target != null) {
-            camDistanceVector = transform.position - target.position;
-        }
-        targetRot = Quaternion.LookRotation(camDistanceVector.normalized);
-        transform.rotation = targetRot;
+        Center();
     }
 }
