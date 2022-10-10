@@ -39,7 +39,6 @@ public class PlayerMovement : MonoBehaviour
 
     Vector3 backstepMoveDir;
     Vector3 rollMoveDir;
-    Timer rollTimer;
 
     Timer sprintTimer;
     Timer idleTimer;
@@ -49,8 +48,7 @@ public class PlayerMovement : MonoBehaviour
     void Awake(){
         m = new MovementProperties();
         cameraT = Camera.main.gameObject.transform;
-        
-        rollTimer = new Timer(1.5f);
+    
         sprintTimer = new Timer(0.5f);
         idleTimer = new Timer(4f);
 
@@ -71,10 +69,6 @@ public class PlayerMovement : MonoBehaviour
 
         Game.control.player.Animate("Running", moveInput.magnitude > 0);
         
-        if(rolling) RollFailSafe();
-        if(!rolling && !backstepping) canMove = true;
-
-        
         if(!moving && Input.GetButtonDown("Backstep")) {
             if(inputQ.InMiddleOfAction()) inputQ.QueueInput("Backstep");
             else StartBackStep();
@@ -86,8 +80,8 @@ public class PlayerMovement : MonoBehaviour
         
         if      (rolling)      ForcedRollMovement();
         else if (backstepping) ForcedBackStepMovement();
-
-        if (!CanStrafe())
+        
+        if (!strafing)
             if(CanMove()) Move();
          else Strafe();
 
@@ -172,6 +166,7 @@ public class PlayerMovement : MonoBehaviour
     //////////////////////////////////////////
 
     bool CanStrafe(){
+        Debug.Log(rolling + "rolling");
         if(!Game.control.cam.targeting) return false;
         if(rolling) return false;
         return true;
@@ -221,8 +216,6 @@ public class PlayerMovement : MonoBehaviour
         Vector3 correctedRot = new Vector3(0,transform.rotation.eulerAngles.y,0);
         transform.rotation = Quaternion.Euler(correctedRot);
 
-        //DetermineMoveSpeed();
-
         Game.control.player.Animate("StrafeR", moveInput.x > 0);
         Game.control.player.Animate("StrafeL", moveInput.x < 0);
         Game.control.player.Animate("StrafeB", moveInput.y < 0);
@@ -269,21 +262,11 @@ public class PlayerMovement : MonoBehaviour
     }
 
     //Invoked from animation event
-    //CHANGE SPEED INTO A CURVE
-    void MidBackStep(){
-        moveSpeed = 0;
-    }
-
-    //Invoked from animation event
     void EndBackStep(){
         backstepping = false;
     }
     
     void ForcedBackStepMovement(){
-       // AnimatorClipInfo[] currentClip = Game.control.player.animator.GetCurrentAnimatorClipInfo(0);
-       // currentClip.
-        //AnimationCurve speedCurve = UnityEditor.AnimationUtility.GetCurveBindings(currentClip.);
-       // float dSpeed = Game.control.player.animator.
         moveSpeed = Game.control.player.animator.GetFloat("BackstepSpeed") * m.backstepSpeed;
         transform.position -= transform.forward * moveSpeed * Time.deltaTime;
     }
@@ -297,10 +280,8 @@ public class PlayerMovement : MonoBehaviour
         CorrectRotationForRoll();
         strafeRoll = strafing;
         strafing = false;
-        rollTimer.Reset();
         canMove = false;
         rolling = true;
-        moveSpeed = m.rollSpeed;
         Game.control.player.Animate("Roll");
         
         if(moveInput.x < 0) moveInput.x = -1;
@@ -311,29 +292,20 @@ public class PlayerMovement : MonoBehaviour
     }
     
     void ForcedRollMovement(){
+        moveSpeed = m.rollSpeed;
+      // moveSpeed = Game.control.player.animator.GetFloat("RollSpeed") * m.rollSpeed * 3;
        transform.position += rollMoveDir * moveSpeed * Time.deltaTime;
     }
 
-    //Invoked from animation event
-    public void MidRoll(){
-        moveSpeed = m.rollSpeed / 2;
-        
-    }
 
     //Invoked from animationevent
     public void EndRoll(){
         rolling = false;
         rollMoveDir = Vector3.zero;
-        rollTimer.Reset();
         if(strafeRoll) {
             strafing = true;
             strafeRoll = false;
         }
-    }
-
-    void RollFailSafe(){
-        rollTimer.Tick();
-        if(rollTimer.TimeOut()) EndRoll();
     }
 
     ///////////////////////////////////
