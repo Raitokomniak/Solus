@@ -12,7 +12,7 @@ public class MovementProperties {
     public float rollSpeed = 8.5f;
     public float backstepSpeed = 6f;
     
-    public float runThreshold = 0.1f;
+    public float runThreshold = 0.2f;
 
 
     public MovementProperties(){}
@@ -32,6 +32,8 @@ public class PlayerMovement : MonoBehaviour
 
     Vector3 moveDir;
     Vector2 moveInput;
+    Vector2 moveInputRaw;
+
     float moveSpeed;
     Quaternion lookRot;
 
@@ -62,6 +64,8 @@ public class PlayerMovement : MonoBehaviour
 
     void LateUpdate() {
         moveInput = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
+        moveInputRaw = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+        Debug.Log(moveInput.x + " " +moveInput.y);
         moving = moveInput.magnitude > 0;
         CheckNextAction();
         DetermineSprint();
@@ -81,10 +85,10 @@ public class PlayerMovement : MonoBehaviour
         if      (rolling)      ForcedRollMovement();
         else if (backstepping) ForcedBackStepMovement();
 
+
         if (!strafing)
             if(CanMove()) Move();
 
-        Debug.Log("straring " + strafing);
         if(strafing) Strafe();
 
        CheckRestraints();
@@ -111,7 +115,7 @@ public class PlayerMovement : MonoBehaviour
     }
 
     void Move(){
-        moveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y).normalized;
+        moveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y);//normalized
         transform.position += moveInput.magnitude * transform.forward * moveSpeed * Time.deltaTime;
         DetermineMoveSpeed();
         Rotate();
@@ -156,8 +160,10 @@ public class PlayerMovement : MonoBehaviour
         if(sprinting) moveSpeed = m.sprintSpeed;
       
      //   animator.SetBool("Walking", walking);
-     
-        Game.control.player.Animate("Running", running);
+
+        Game.control.player.Animate("Running", (Mathf.Abs(moveInput.x) > 0.2 || Mathf.Abs(moveInput.y) > 0.2f));
+        
+
         Game.control.player.Animate("Sprinting", sprinting);
     }
     
