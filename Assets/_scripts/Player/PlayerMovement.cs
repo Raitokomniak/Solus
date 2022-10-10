@@ -67,7 +67,7 @@ public class PlayerMovement : MonoBehaviour
         DetermineSprint();
         CheckIdling();
 
-        Game.control.player.Animate("Running", moveInput.magnitude > 0);
+       // Game.control.player.Animate("Running", moveInput.magnitude > 0);
         
         if(!moving && Input.GetButtonDown("Backstep")) {
             if(inputQ.InMiddleOfAction()) inputQ.QueueInput("Backstep");
@@ -80,13 +80,14 @@ public class PlayerMovement : MonoBehaviour
         
         if      (rolling)      ForcedRollMovement();
         else if (backstepping) ForcedBackStepMovement();
-        
+
         if (!strafing)
             if(CanMove()) Move();
-         else Strafe();
 
-        if(moveInput.magnitude == 0) Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
-        else Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        Debug.Log("straring " + strafing);
+        if(strafing) Strafe();
+
+       CheckRestraints();
     }
 
     //////////////////////////////////////////
@@ -159,8 +160,11 @@ public class PlayerMovement : MonoBehaviour
         Game.control.player.Animate("Running", running);
         Game.control.player.Animate("Sprinting", sprinting);
     }
-
-
+    
+    void CheckRestraints(){
+        if(moveInput.magnitude == 0) Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
+        else Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+    }
     //////////////////////////////////////////
     // TARGETING
     //////////////////////////////////////////
@@ -174,6 +178,7 @@ public class PlayerMovement : MonoBehaviour
 
     public void ReleaseTarget(){
         strafing = false;
+        strafeRoll = false;
         IEnumerator waitroll = StrafeWaitForRoll(false);
         StartCoroutine(waitroll);
         
@@ -292,8 +297,7 @@ public class PlayerMovement : MonoBehaviour
     }
     
     void ForcedRollMovement(){
-        moveSpeed = m.rollSpeed;
-      // moveSpeed = Game.control.player.animator.GetFloat("RollSpeed") * m.rollSpeed * 3;
+       moveSpeed = Game.control.player.animator.GetFloat("RollSpeed") * m.rollSpeed * 2;
        transform.position += rollMoveDir * moveSpeed * Time.deltaTime;
     }
 
@@ -302,6 +306,7 @@ public class PlayerMovement : MonoBehaviour
     public void EndRoll(){
         rolling = false;
         rollMoveDir = Vector3.zero;
+        
         if(strafeRoll) {
             strafing = true;
             strafeRoll = false;
