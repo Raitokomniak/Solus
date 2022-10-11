@@ -31,6 +31,7 @@ public class InputQueueing : MonoBehaviour
         return "";
     }
 
+    
     public void QueueInput(string input){
         inputQueue.Add(input);
     }

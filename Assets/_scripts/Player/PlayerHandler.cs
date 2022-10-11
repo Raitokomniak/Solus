@@ -6,9 +6,11 @@ public class PlayerHandler : MonoBehaviour
 {
     public Rigidbody rb;
 
+    public Transform cameraT;
     public PlayerMovement movement;
     public PlayerAttack attack;
     public PlayerTargetingRange targetingRange;
+    public PlayerTargeting pTarget;
 
     public Animator animator;
 
@@ -16,6 +18,17 @@ public class PlayerHandler : MonoBehaviour
     void Awake(){
         rb = GetComponent<Rigidbody>();
         animator = GetComponent<Animator>();
+        cameraT = Camera.main.gameObject.transform;
+        pTarget = GetComponent<PlayerTargeting>();
+    }
+
+    public void TargetEnemy(bool toggle, Transform target){
+        if(!toggle) pTarget.ReleaseTarget();
+        else        pTarget.TargetEnemy(target);
+    }
+
+    public void ReleaseTarget(){
+        
     }
 
     public bool EnemiesInRange(){

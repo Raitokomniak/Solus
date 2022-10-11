@@ -80,12 +80,12 @@ public class CameraMovement : MonoBehaviour
     void TargetEnemy(Transform enemy){
         targeting = true;
         target = enemy;
-        Game.control.player.movement.TargetEnemy(enemy);
+        Game.control.player.TargetEnemy(true, enemy);
     }
 
     public void ReleaseTarget(){
         targeting = false;
-        Game.control.player.movement.ReleaseTarget();
+        Game.control.player.TargetEnemy(false, null);
         Center();
     }
 }

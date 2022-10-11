@@ -20,42 +20,49 @@ public class MovementProperties {
 
 
 public class PlayerMovement : MonoBehaviour
-{
-    InputQueueing inputQ;
+{   
+    public InputQueueing inputQ;
+    public PlayerHandler player;
+    
+    PlayerTurnAnimation pTurn;
+    PlayerDodge pDodge;
+    
+    public MovementProperties m;
+    
+   // GroundDetect groundDetect;
 
-    MovementProperties m;
+    //inputs
+    public Vector2 moveInput;
+    public Vector2 moveInputRaw;
+    public Vector2 lastInputRaw;
 
-    GroundDetect groundDetect;
-
-    public Transform cameraT;
-    public Transform strafeTarget;
-
-    Vector3 moveDir;
-    Vector2 moveInput;
-    Vector2 moveInputRaw;
-
-    float moveSpeed;
+    //vectors
+    public Vector3 moveDir;
+    public float moveSpeed;
     Quaternion lookRot;
 
-    public bool canMove, idling, moving, running, sprinting, rolling, backstepping, strafing, strafeRoll;
+    public bool canMove, idling, moving, running, sprinting, backstepping, rolling, strafeRoll, strafing, turning;
 
-    Vector3 backstepMoveDir;
-    Vector3 rollMoveDir;
 
     Timer sprintTimer;
     Timer idleTimer;
 
 
 
+
     void Awake(){
         m = new MovementProperties();
-        cameraT = Camera.main.gameObject.transform;
+        pTurn = GetComponent<PlayerTurnAnimation>();
+        player = Game.control.player;
     
         sprintTimer = new Timer(0.5f);
         idleTimer = new Timer(4f);
 
         inputQ = GetComponent<InputQueueing>();
         canMove = true;
+
+        moveInput = new Vector2();
+        lastInputRaw = new Vector2(-100, -100);
     }
 
     //////////////////////////////////////////
@@ -65,46 +72,15 @@ public class PlayerMovement : MonoBehaviour
     void LateUpdate() {
         moveInput = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
         moveInputRaw = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
-        Debug.Log(moveInput.x + " " +moveInput.y);
         moving = moveInput.magnitude > 0;
-        CheckNextAction();
+
         DetermineSprint();
         CheckIdling();
-
-       // Game.control.player.Animate("Running", moveInput.magnitude > 0);
-        
-        if(!moving && Input.GetButtonDown("Backstep")) {
-            if(inputQ.InMiddleOfAction()) inputQ.QueueInput("Backstep");
-            else StartBackStep();
-        }
-        
     }
 
     void FixedUpdate() {
-        
-        if      (rolling)      ForcedRollMovement();
-        else if (backstepping) ForcedBackStepMovement();
-
-
-        if (!strafing)
-            if(CanMove()) Move();
-
-        if(strafing) Strafe();
-
-       CheckRestraints();
-    }
-
-    //////////////////////////////////////////
-    // BASICS
-    //////////////////////////////////////////
-
-    void CheckNextAction(){
-        string nextAction = inputQ.CheckQueue();
-        if(nextAction == "Roll") {
-            if(moveInput.magnitude == 0) nextAction = "Backstep";
-            else StartRoll();
-        }
-        if(nextAction == "Backstep") StartBackStep();
+        if (!strafing) if(CanMove()) Move();
+        CheckRestraints();
     }
 
     bool CanMove(){
@@ -115,7 +91,7 @@ public class PlayerMovement : MonoBehaviour
     }
 
     void Move(){
-        moveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y);//normalized
+        moveDir = (player.cameraT.right*moveInput.x) + (Vector3.Cross(player.cameraT.right, Vector3.up) * moveInput.y);//normalized
         transform.position += moveInput.magnitude * transform.forward * moveSpeed * Time.deltaTime;
         DetermineMoveSpeed();
         Rotate();
@@ -123,17 +99,15 @@ public class PlayerMovement : MonoBehaviour
 
     void Rotate(){
         if(Game.control.player.rb.velocity != Vector3.zero && Game.control.player.rb.velocity.magnitude > 0) lookRot = Quaternion.LookRotation(Game.control.player.rb.velocity); 
+        
         if(moveDir.magnitude <= 0) lookRot = Quaternion.LookRotation(transform.forward);
         else lookRot = Quaternion.LookRotation(moveDir);
-
-        transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, m.turnSpeed * Time.deltaTime);
+        
+        float turnS = 0;
+        if(turning) turnS = Game.control.player.animator.GetFloat("TurnSpeed") * m.turnSpeed * Time.deltaTime;
+        else turnS = m.turnSpeed * Time.deltaTime;
+        transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, turnS);
     }
-
-    void CorrectRotationForRoll(){
-        moveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y).normalized;
-        transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(moveDir), m.turnSpeed);
-    }
-
     
     void DetermineSprint(){
         if(!moving) return;
@@ -142,7 +116,7 @@ public class PlayerMovement : MonoBehaviour
         if(!sprintTimer.TimeOut() && Input.GetButtonUp("Roll")) {
             sprintTimer.Reset();
             if(inputQ.InMiddleOfAction()) inputQ.QueueInput("Roll");
-            else StartRoll();
+            else pDodge.StartRoll(moveInput);
         }
         if(sprintTimer.TimeOut()) {
             sprinting = Input.GetButton("Sprint");
@@ -152,90 +126,17 @@ public class PlayerMovement : MonoBehaviour
 
     void DetermineMoveSpeed(){
         float speed = moveInput.magnitude;
-   //     walking = speed > 0 && speed < m.runThreshold;
         running = speed >= m.runThreshold;
-
-     //   if(walking) moveSpeed = m.walkSpeed;
         if(running) moveSpeed = m.runSpeed;
         if(sprinting) moveSpeed = m.sprintSpeed;
-      
-     //   animator.SetBool("Walking", walking);
 
         Game.control.player.Animate("Running", (Mathf.Abs(moveInput.x) > 0.2 || Mathf.Abs(moveInput.y) > 0.2f));
-        
-
         Game.control.player.Animate("Sprinting", sprinting);
     }
     
     void CheckRestraints(){
         if(moveInput.magnitude == 0) Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
         else Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-    }
-    //////////////////////////////////////////
-    // TARGETING
-    //////////////////////////////////////////
-
-    bool CanStrafe(){
-        Debug.Log(rolling + "rolling");
-        if(!Game.control.cam.targeting) return false;
-        if(rolling) return false;
-        return true;
-    }
-
-    public void ReleaseTarget(){
-        strafing = false;
-        strafeRoll = false;
-        IEnumerator waitroll = StrafeWaitForRoll(false);
-        StartCoroutine(waitroll);
-        
-    }
-
-    public void TargetEnemy(Transform target){
-        if(target!=null) transform.rotation = Quaternion.LookRotation(target.position);
-        strafing = true;
-        strafeTarget = target;
-        
-        IEnumerator waitroll = StrafeWaitForRoll(true);
-        StartCoroutine(waitroll);
-    }
-
-    IEnumerator StrafeWaitForRoll(bool tostrafe){
-        if(inputQ.InMiddleOfAction()){
-            yield return new WaitUntil(() => rolling == false);
-            yield return new WaitUntil(() => backstepping == false);
-        }
-
-        if(tostrafe){
-            Game.control.player.Animate("StartStrafe");
-            Game.control.player.Animate("StrafeI", true);
-            Game.control.player.Animate("Running", false);
-        }
-        else {
-            Game.control.player.Animate("StrafeI", false);
-            Game.control.player.Animate("EndStrafe");
-        }
-    }
-
-    void Strafe(){
-        moveInput = moveInput.normalized;
-        moveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y).normalized;
-        if(strafeTarget == null) return;
-        Vector3 vectorToTarget = transform.position - strafeTarget.position;
-        Quaternion targetRot = Quaternion.LookRotation(strafeTarget.position - transform.position);
-        transform.position += targetRot * new Vector3(moveInput.x, 0, moveInput.y) * moveSpeed * Time.deltaTime;
-        transform.rotation = targetRot;
-        Vector3 correctedRot = new Vector3(0,transform.rotation.eulerAngles.y,0);
-        transform.rotation = Quaternion.Euler(correctedRot);
-
-        Game.control.player.Animate("StrafeR", moveInput.x > 0);
-        Game.control.player.Animate("StrafeL", moveInput.x < 0);
-        Game.control.player.Animate("StrafeB", moveInput.y < 0);
-        Game.control.player.Animate("StrafeF", moveInput.y > 0);
-        
-        if(!rolling && !backstepping){
-            if(moveInput.y < 0 && moveInput.x == 0) moveSpeed = m.walkSpeed;
-            else moveSpeed = m.runSpeed;
-        }
     }
 
 
@@ -259,70 +160,4 @@ public class PlayerMovement : MonoBehaviour
         canMove = toggle > 0;
     }
 
-    
-
-    //////////////////////////////////////////
-    // BACKSTEP
-    //////////////////////////////////////////
-
-    void StartBackStep(){
-        backstepping = true;
-        canMove = false;
-        moveSpeed = m.backstepSpeed;
-        Game.control.player.Animate("Backstep");
-    }
-
-    //Invoked from animation event
-    void EndBackStep(){
-        backstepping = false;
-    }
-    
-    void ForcedBackStepMovement(){
-        moveSpeed = Game.control.player.animator.GetFloat("BackstepSpeed") * m.backstepSpeed;
-        transform.position -= transform.forward * moveSpeed * Time.deltaTime;
-    }
-
-    
-    //////////////////////////////////////////
-    // ROLLING
-    //////////////////////////////////////////
-
-    void StartRoll(){
-        CorrectRotationForRoll();
-        strafeRoll = strafing;
-        strafing = false;
-        canMove = false;
-        rolling = true;
-        Game.control.player.Animate("Roll");
-        
-        if(moveInput.x < 0) moveInput.x = -1;
-        if(moveInput.x > 0) moveInput.x = 1;
-        if(moveInput.y < 0) moveInput.y = -1;
-        if(moveInput.y > 0) moveInput.y = 1;
-        rollMoveDir = (cameraT.right*moveInput.x) + (Vector3.Cross(cameraT.right, Vector3.up) * moveInput.y).normalized;
-    }
-    
-    void ForcedRollMovement(){
-       moveSpeed = Game.control.player.animator.GetFloat("RollSpeed") * m.rollSpeed * 2;
-       transform.position += rollMoveDir * moveSpeed * Time.deltaTime;
-    }
-
-
-    //Invoked from animationevent
-    public void EndRoll(){
-        rolling = false;
-        rollMoveDir = Vector3.zero;
-        
-        if(strafeRoll) {
-            strafing = true;
-            strafeRoll = false;
-        }
-    }
-
-    ///////////////////////////////////
-
-    public void StartLightAttackMovement(){
-        moveSpeed = 0;
-        canMove = false;
-    }
 }
