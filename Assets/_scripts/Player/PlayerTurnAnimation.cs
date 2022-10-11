@@ -2,15 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PlayerTurnAnimation : PlayerMovement
+public class PlayerTurnAnimation : MonoBehaviour
 {
-    PlayerMovement movement;
-
     bool checkingstop;
     //Timer turnAnimTimer = new Timer(0.5f);
 
-    private void Awake() {
-        movement = GetComponent<PlayerMovement>();
+    PlayerMovement m;
+    void Awake(){
+        m = GetComponent<PlayerMovement>();
     }
 
     void LateUpdate(){
@@ -19,41 +18,41 @@ public class PlayerTurnAnimation : PlayerMovement
 
     public void DetermineTurnAnimation(){
         
-        if(!running) return;
+        if(!m.running) return;
 
         IEnumerator checkStop = CheckIfStopped();
-        if(moveInputRaw.x == 0) {
+        if(m.moveInputRaw.x == 0) {
             StopCoroutine(checkStop);
             StartCoroutine(checkStop);
         }
 
-        if(moveInputRaw.x != 0 && moveInputRaw.x != lastInputRaw.x) {
+        if(m.moveInputRaw.x != 0 && m.moveInputRaw.x != m.lastInputRaw.x) {
 
-            if(lastInputRaw.x == -100) {
-                lastInputRaw.x = moveInputRaw.x;
+            if(m.lastInputRaw.x == -100) {
+                m.lastInputRaw.x = m.moveInputRaw.x;
                 return;
             }
            // Debug.Log("last x " + lastInputRaw.x);
-            lastInputRaw.x = moveInputRaw.x;
+            m.lastInputRaw.x = m.moveInputRaw.x;
            // Debug.Log("new x " + moveInputRaw.x);
 
-            if(moveInput.y < .2f){
+            if(m.moveInput.y < .2f){
                 Game.control.player.Animate("Turn180Run");
-                turning = true;
-                running = false;
+                m.turning = true;
+                m.running = false;
                 Debug.Log("turn");
             }
         }
     }
 
     public void EndTurn(){
-        turning = false;
-        running = moveInput.magnitude > 0;
+        m.turning = false;
+        m.running = m.moveInput.magnitude > 0;
     }
 
     
     IEnumerator CheckIfStopped(){
         yield return new WaitForSeconds(1f);
-        lastInputRaw.x = -100;
+        m.lastInputRaw.x = -100;
     }
 }

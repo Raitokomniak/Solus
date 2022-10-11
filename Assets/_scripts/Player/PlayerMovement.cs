@@ -27,7 +27,7 @@ public class PlayerMovement : MonoBehaviour
     PlayerTurnAnimation pTurn;
     PlayerDodge pDodge;
     
-    public MovementProperties m;
+    public MovementProperties properties;
     
    // GroundDetect groundDetect;
 
@@ -43,6 +43,7 @@ public class PlayerMovement : MonoBehaviour
 
     public bool canMove, idling, moving, running, sprinting, backstepping, rolling, strafeRoll, strafing, turning;
 
+    public bool init = false;
 
     Timer sprintTimer;
     Timer idleTimer;
@@ -51,9 +52,10 @@ public class PlayerMovement : MonoBehaviour
 
 
     void Awake(){
-        m = new MovementProperties();
+        properties = new MovementProperties();
         pTurn = GetComponent<PlayerTurnAnimation>();
-        player = Game.control.player;
+        pDodge = GetComponent<PlayerDodge>();
+        //player = Game.control.player;
     
         sprintTimer = new Timer(0.5f);
         idleTimer = new Timer(4f);
@@ -63,6 +65,7 @@ public class PlayerMovement : MonoBehaviour
 
         moveInput = new Vector2();
         lastInputRaw = new Vector2(-100, -100);
+        init = true;
     }
 
     //////////////////////////////////////////
@@ -79,8 +82,15 @@ public class PlayerMovement : MonoBehaviour
     }
 
     void FixedUpdate() {
+        
+        if(properties == null) properties = new MovementProperties();
+
         if (!strafing) if(CanMove()) Move();
         CheckRestraints();
+    }
+
+    void Update(){
+        if(player == null && Game.control != null) player = Game.control.player;
     }
 
     bool CanMove(){
@@ -91,7 +101,13 @@ public class PlayerMovement : MonoBehaviour
     }
 
     void Move(){
-        moveDir = (player.cameraT.right*moveInput.x) + (Vector3.Cross(player.cameraT.right, Vector3.up) * moveInput.y);//normalized
+        Debug.Log(moveInput.magnitude);
+        if(moveInput.magnitude > 1) {
+            moveInput.x = moveInput.x * 0.75f;
+            moveInput.y = moveInput.y * 0.75f;
+        }
+        
+        moveDir = (Camera.main.gameObject.transform.right*moveInput.x) + (Vector3.Cross(Camera.main.gameObject.transform.right, Vector3.up) * moveInput.y);//normalized
         transform.position += moveInput.magnitude * transform.forward * moveSpeed * Time.deltaTime;
         DetermineMoveSpeed();
         Rotate();
@@ -104,8 +120,8 @@ public class PlayerMovement : MonoBehaviour
         else lookRot = Quaternion.LookRotation(moveDir);
         
         float turnS = 0;
-        if(turning) turnS = Game.control.player.animator.GetFloat("TurnSpeed") * m.turnSpeed * Time.deltaTime;
-        else turnS = m.turnSpeed * Time.deltaTime;
+        if(turning) turnS = Game.control.player.animator.GetFloat("TurnSpeed") * properties.turnSpeed * Time.deltaTime;
+        else turnS = properties.turnSpeed * Time.deltaTime;
         transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, turnS);
     }
     
@@ -126,9 +142,9 @@ public class PlayerMovement : MonoBehaviour
 
     void DetermineMoveSpeed(){
         float speed = moveInput.magnitude;
-        running = speed >= m.runThreshold;
-        if(running) moveSpeed = m.runSpeed;
-        if(sprinting) moveSpeed = m.sprintSpeed;
+        running = speed >= properties.runThreshold;
+        if(running) moveSpeed = properties.runSpeed;
+        if(sprinting) moveSpeed = properties.sprintSpeed;
 
         Game.control.player.Animate("Running", (Mathf.Abs(moveInput.x) > 0.2 || Mathf.Abs(moveInput.y) > 0.2f));
         Game.control.player.Animate("Sprinting", sprinting);

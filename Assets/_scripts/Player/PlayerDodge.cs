@@ -2,29 +2,35 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PlayerDodge : PlayerMovement
+public class PlayerDodge : MonoBehaviour
 {
     Vector3 rollMoveDir;
 
+    PlayerMovement m;
+    void Awake(){
+        m = GetComponent<PlayerMovement>();
+    }
+
     void FixedUpdate(){
-        if      (rolling)      ForcedRollMovement();
-        if (backstepping) ForcedBackStepMovement();
+        if      (m.rolling)      ForcedRollMovement();
+        if (m.backstepping) ForcedBackStepMovement();
     }
 
     void LateUpdate(){
+
         CheckNextAction();
 
-        if(!moving && Input.GetButtonDown("Backstep")) {
-            if(inputQ.InMiddleOfAction()) inputQ.QueueInput("Backstep");
+        if(!m.moving && Input.GetButtonDown("Backstep")) {
+            if(m.inputQ.InMiddleOfAction()) m.inputQ.QueueInput("Backstep");
             else StartBackStep();
         }
     }
 
     void CheckNextAction(){
-        string nextAction = inputQ.CheckQueue();
-        if(inputQ.CheckQueue() == "Roll"){
-            if(moveInput.magnitude == 0) nextAction = "Backstep";
-            else StartRoll(moveInput);
+        string nextAction = m.inputQ.CheckQueue();
+        if(m.inputQ.CheckQueue() == "Roll"){
+            if(m.moveInput.magnitude == 0) nextAction = "Backstep";
+            else StartRoll(m.moveInput);
         }
         if(nextAction == "Backstep") StartBackStep();
     }
@@ -35,39 +41,39 @@ public class PlayerDodge : PlayerMovement
 
     public void StartRoll(Vector2 moveInput){
         CorrectRotationForRoll(moveInput);
-        strafeRoll = strafing;
-        strafing = false;
-        canMove = false;
-        rolling = true;
+        m.strafeRoll = m.strafing;
+        m.strafing = false;
+        m.canMove = false;
+        m.rolling = true;
         Game.control.player.Animate("Roll");
         
         if(moveInput.x < 0) moveInput.x = -1;
         if(moveInput.x > 0) moveInput.x = 1;
         if(moveInput.y < 0) moveInput.y = -1;
         if(moveInput.y > 0) moveInput.y = 1;
-        rollMoveDir = (player.cameraT.right*moveInput.x) + (Vector3.Cross(player.cameraT.right, Vector3.up) * moveInput.y).normalized;
+        rollMoveDir = (m.player.cameraT.right*moveInput.x) + (Vector3.Cross(m.player.cameraT.right, Vector3.up) * moveInput.y).normalized;
     }
     
     void ForcedRollMovement(){
-       moveSpeed = Game.control.player.animator.GetFloat("RollSpeed") * m.rollSpeed * 2;
-       transform.position += rollMoveDir * moveSpeed * Time.deltaTime;
+       m.moveSpeed = Game.control.player.animator.GetFloat("RollSpeed") * m.properties.rollSpeed * 2;
+       transform.position += rollMoveDir * m.moveSpeed * Time.deltaTime;
     }
 
 
     //Invoked from animationevent
     public void EndRoll(){
-        rolling = false;
+        m.rolling = false;
         rollMoveDir = Vector3.zero;
         
-        if(strafeRoll) {
-            strafing = true;
-            strafeRoll = false;
+        if(m.strafeRoll) {
+            m.strafing = true;
+            m.strafeRoll = false;
         }
     }
 
     void CorrectRotationForRoll(Vector2 moveInput){
-        moveDir = (player.cameraT.right*moveInput.x) + (Vector3.Cross(player.cameraT.right, Vector3.up) * moveInput.y).normalized;
-        transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(moveDir), m.turnSpeed);
+        m.moveDir = (m.player.cameraT.right*moveInput.x) + (Vector3.Cross(m.player.cameraT.right, Vector3.up) * moveInput.y).normalized;
+        transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(m.moveDir), m.properties.turnSpeed);
     }
 
 
@@ -76,25 +82,25 @@ public class PlayerDodge : PlayerMovement
     //////////////////////////////////////////
 
     void StartBackStep(){
-        backstepping = true;
-        canMove = false;
-        moveSpeed = m.backstepSpeed;
+        m.backstepping = true;
+        m.canMove = false;
+        m.moveSpeed = m.properties.backstepSpeed;
         Game.control.player.Animate("Backstep");
     }
 
     //Invoked from animation event
     void EndBackStep(){
-        backstepping = false;
+        m.backstepping = false;
     }
     
     void ForcedBackStepMovement(){
-        moveSpeed = Game.control.player.animator.GetFloat("BackstepSpeed") * m.backstepSpeed;
-        transform.position -= transform.forward * moveSpeed * Time.deltaTime;
+        m.moveSpeed = Game.control.player.animator.GetFloat("BackstepSpeed") * m.properties.backstepSpeed;
+        transform.position -= transform.forward * m.moveSpeed * Time.deltaTime;
     }
 
     public void StartLightAttackMovement(){
-        moveSpeed = 0;
-        canMove = false;
+        m.moveSpeed = 0;
+        m.canMove = false;
     }
 
 }
