@@ -700,18 +700,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d00a97494ae900e499170127bfd2e585, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cameraT: {fileID: 963194228}
-  strafeTarget: {fileID: 0}
+  inputQ: {fileID: 0}
+  player: {fileID: 0}
+  moveInput: {x: 0, y: 0}
+  moveInputRaw: {x: 0, y: 0}
+  lastInputRaw: {x: 0, y: 0}
+  moveDir: {x: 0, y: 0, z: 0}
+  moveSpeed: 0
   canMove: 0
   idling: 0
   moving: 0
   running: 0
   sprinting: 0
-  rolling: 0
   backstepping: 0
-  backstepMoving: 0
-  strafing: 0
+  rolling: 0
   strafeRoll: 0
+  strafing: 0
+  turning: 0
+  init: 0
 --- !u!4 &1307199925 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 957bc77cd1fab154c915b18ae8cedf47, type: 3}
@@ -760,9 +766,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   rb: {fileID: 1307199927}
+  cameraT: {fileID: 0}
   movement: {fileID: 1307199924}
   attack: {fileID: 1307199929}
   targetingRange: {fileID: 1298306206}
+  pTarget: {fileID: 0}
   animator: {fileID: 1307199923}
 --- !u!114 &1307199929
 MonoBehaviour:
@@ -788,6 +796,42 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e4fd80b7733544f4cbc8202784751f42, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1307199931
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1307199922}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75d5538b79e077a4f8c9d70712298414, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1307199932
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1307199922}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76034fdba0dcfa048b134b7daf6bcef1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1307199933
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1307199922}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c6e08505147bdd41b1e2247f120c3af, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &1878959622

@@ -101,14 +101,14 @@ public class PlayerMovement : MonoBehaviour
     }
 
     void Move(){
-        Debug.Log(moveInput.magnitude);
         if(moveInput.magnitude > 1) {
-            moveInput.x = moveInput.x * 0.75f;
-            moveInput.y = moveInput.y * 0.75f;
+            if(moveInput.x > 0.7f) moveInput.x = moveInput.x * 0.75f;
+            if(moveInput.y > 0.7f) moveInput.y = moveInput.y * 0.75f;
         }
         
         moveDir = (Camera.main.gameObject.transform.right*moveInput.x) + (Vector3.Cross(Camera.main.gameObject.transform.right, Vector3.up) * moveInput.y);//normalized
-        transform.position += moveInput.magnitude * transform.forward * moveSpeed * Time.deltaTime;
+
+        transform.position += moveDir.normalized.magnitude * transform.forward * moveSpeed * Time.deltaTime;
         DetermineMoveSpeed();
         Rotate();
     }
@@ -120,8 +120,7 @@ public class PlayerMovement : MonoBehaviour
         else lookRot = Quaternion.LookRotation(moveDir);
         
         float turnS = 0;
-        if(turning) turnS = Game.control.player.animator.GetFloat("TurnSpeed") * properties.turnSpeed * Time.deltaTime;
-        else turnS = properties.turnSpeed * Time.deltaTime;
+        turnS = properties.turnSpeed * Time.deltaTime;
         transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, turnS);
     }
     
