@@ -4,18 +4,11 @@ using UnityEngine;
 
 public class PlayerTurnAnimation : MonoBehaviour
 {
-    bool checkingstop;
-    //Timer turnAnimTimer = new Timer(0.5f);
-
     PlayerMovement m;
     Quaternion lookRot;
     void Awake(){
         m = GetComponent<PlayerMovement>();
         InvokeRepeating("CheckTurn", 0, .05f);
-    }
-
-    void LateUpdate(){
-        
     }
 
     void FixedUpdate(){
@@ -24,35 +17,29 @@ public class PlayerTurnAnimation : MonoBehaviour
     }
 
     void CheckTurn(){
-       lookRot = Quaternion.LookRotation(m.moveDir);
+       if(m.moveDir.magnitude != 0) lookRot = Quaternion.LookRotation(m.moveDir);
     }
 
     public void DetermineTurnAnimation(){
         if(!m.sprinting) return;
         if(m.turning) return;
         
+        //get diffs in rotation from 12 frames ago
         float targetY = lookRot.eulerAngles.y;
         float rotY = transform.rotation.eulerAngles.y;
         float rotDiff = Mathf.Abs(targetY - rotY);
 
-        Debug.Log(targetY + " target vs rot " + rotY);
-        
+        //if at 360-0 border, correct
         if(targetY > 345 && rotY > 0) rotDiff -= 345;
         if(rotY > 345 && targetY > 0) rotDiff -= 345;
 
-        if(rotDiff > 30){
-            Debug.Log("diff " + rotDiff);
-            Turn();
-        }
+        if(rotDiff > 30) Turn();
     }
 
     void Turn(){
         m.player.Animate("Turning", true);
         Game.control.player.Animate("Turn180Run");
-        
         m.turning = true;
-       // m.running = false;
-        Debug.Log("turn");
     }
 
     public void EndTurn(){
@@ -61,9 +48,4 @@ public class PlayerTurnAnimation : MonoBehaviour
         m.player.Animate("Turning", false);
     }
 
-    
-    IEnumerator CheckIfStopped(){
-        yield return new WaitForSeconds(1f);
-        m.lastInputRaw.x = -100;
-    }
 }
