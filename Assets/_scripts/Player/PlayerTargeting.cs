@@ -14,7 +14,9 @@ public class PlayerTargeting : MonoBehaviour
     void FixedUpdate(){
         if(!m.init) return;
 
+        Debug.Log(m.strafing);
         if(m.strafing) Strafe();
+        //else EndAllStrafeAnimations();
     }
 
 
@@ -42,6 +44,15 @@ public class PlayerTargeting : MonoBehaviour
         StartCoroutine(waitroll);
     }
 
+    void EndAllStrafeAnimations(){
+        Game.control.player.Animate("StrafeR", false);
+        Game.control.player.Animate("StrafeL", false);
+        Game.control.player.Animate("StrafeB", false);
+        Game.control.player.Animate("StrafeF", false);
+        Game.control.player.Animate("StrafeI", false);
+        //Game.control.player.Animate("EndStrafe");
+    }
+
     IEnumerator StrafeWaitForRoll(bool tostrafe){
         if(m.inputQ.InMiddleOfAction()){
             yield return new WaitUntil(() => m.rolling == false);
@@ -50,12 +61,10 @@ public class PlayerTargeting : MonoBehaviour
 
         if(tostrafe){
             Game.control.player.Animate("StartStrafe");
-            Game.control.player.Animate("StrafeI", true);
             Game.control.player.Animate("Running", false);
         }
         else {
-            Game.control.player.Animate("StrafeI", false);
-            Game.control.player.Animate("EndStrafe");
+            EndAllStrafeAnimations();
         }
     }
 
@@ -74,6 +83,7 @@ public class PlayerTargeting : MonoBehaviour
         Game.control.player.Animate("StrafeL", m.moveInput.x < 0);
         Game.control.player.Animate("StrafeB", m.moveInput.y < 0);
         Game.control.player.Animate("StrafeF", m.moveInput.y > 0);
+        Game.control.player.Animate("StrafeI", true);
         
         if(!m.rolling && !m.backstepping){
             if(m.moveInput.y < 0 && m.moveInput.x == 0) m.moveSpeed = m.properties.walkSpeed;
