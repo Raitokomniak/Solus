@@ -10,6 +10,10 @@ public class PlayerAttack : MonoBehaviour
     public bool attacking;
     public bool restrictedMovement;
 
+    public bool canCombo;
+
+    string combo;
+
     void Awake(){
         inputQ = GetComponent<InputQueueing>();
     }
@@ -20,12 +24,24 @@ public class PlayerAttack : MonoBehaviour
         CheckNextAction();
 
         if(Input.GetButtonDown("LightAttack")){
+            
             if(inputQ.InMiddleOfAction())
                 inputQ.QueueInput("LightAttack");
             else LightAttack();
+
+            if(canCombo) ComboAttack();
         }
     }
 
+    void ComboAttack(){
+        player.Animate(combo);
+        attacking = true;
+    }
+
+    public void EnableCombo(string combo){
+        this.combo = combo;
+        canCombo = true;
+    }
     void CheckNextAction(){
         string nextAction = inputQ.CheckQueue();
         if(nextAction == "LightAttack") LightAttack();
@@ -42,5 +58,6 @@ public class PlayerAttack : MonoBehaviour
 
     public void EndAttack(){
         attacking = false;
+        canCombo = false;
     }
 }

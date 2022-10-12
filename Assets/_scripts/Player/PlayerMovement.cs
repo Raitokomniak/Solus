@@ -85,6 +85,8 @@ public class PlayerMovement : MonoBehaviour
         
         if(properties == null) properties = new MovementProperties();
 
+        
+
         if (!strafing) if(CanMove()) Move();
         CheckRestraints();
     }
@@ -108,7 +110,7 @@ public class PlayerMovement : MonoBehaviour
         
         moveDir = (Camera.main.gameObject.transform.right*moveInput.x) + (Vector3.Cross(Camera.main.gameObject.transform.right, Vector3.up) * moveInput.y);//normalized
 
-        transform.position += moveDir.normalized.magnitude * transform.forward * moveSpeed * Time.deltaTime;
+        transform.position += moveDir.normalized.magnitude * transform.forward * moveInput.magnitude * moveSpeed * Time.deltaTime;
         DetermineMoveSpeed();
         Rotate();
     }
