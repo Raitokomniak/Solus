@@ -8,7 +8,7 @@ public class MovementProperties {
     public float walkSpeed = 2f;
     public float runSpeed = 5f;
     public float sprintSpeed = 10f;
-    public float turnSpeed = 5f;
+    public float turnSpeed = 10f;
     public float rollSpeed = 8.5f;
     public float backstepSpeed = 6f;
     
@@ -82,6 +82,10 @@ public class PlayerMovement : MonoBehaviour
     void FixedUpdate() {
         
         if(properties == null) properties = new MovementProperties();
+        DetermineMoveSpeed();
+
+        if(Game.control.player.attack.attacking) transform.position += transform.forward * moveSpeed * 10 * Time.deltaTime;
+
         if (!strafing) { 
             if(CanMove()) Move();
             if(CanRotate()) Rotate();
@@ -96,12 +100,11 @@ public class PlayerMovement : MonoBehaviour
     bool CanMove(){
         if(rolling) return false;
         if(backstepping) return false;
-        if(Game.control.player.attack.restrictedMovement) return false;
+        if(Game.control.player.attack.attacking) return false;
         return true;
     }
 
     bool CanRotate(){
-        if(Game.control.player.attack.restrictedRotation) return false;
         if(rolling) return false;
         return true;
     }
@@ -112,9 +115,12 @@ public class PlayerMovement : MonoBehaviour
             if(moveInput.x > 0.7f) moveInput.x = moveInput.x * 0.75f;
             if(moveInput.y > 0.7f) moveInput.y = moveInput.y * 0.75f;
         }
+        
+        
+
         moveDir = (Camera.main.gameObject.transform.right*moveInput.x) + (Vector3.Cross(Camera.main.gameObject.transform.right, Vector3.up) * moveInput.y );//normalized
         transform.position += moveDir.normalized.magnitude * transform.forward * moveSpeed * Time.deltaTime;
-        DetermineMoveSpeed();
+        
         //Rotate();
     }
 
@@ -157,6 +163,8 @@ public class PlayerMovement : MonoBehaviour
         running = speed >= properties.runThreshold;
         if(running) moveSpeed = properties.runSpeed;
         if(sprinting) moveSpeed = properties.sprintSpeed;
+        if(Game.control.player.attack.attacking) moveSpeed = Game.control.player.animator.GetFloat("MoveSpeed");
+
 
         Game.control.player.Animate("Running", (Mathf.Abs(moveInput.x) > 0.2 || Mathf.Abs(moveInput.y) > 0.2f));
         Game.control.player.Animate("Sprinting", sprinting);

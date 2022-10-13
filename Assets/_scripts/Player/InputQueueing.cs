@@ -9,6 +9,8 @@ public class InputQueueing : MonoBehaviour
 
     public bool rollAttack;
 
+
+
     void Awake(){
         inputQueue = new List<string>();
         inputTimer = new Timer(1f);
@@ -35,10 +37,9 @@ public class InputQueueing : MonoBehaviour
 
     
     public void QueueInput(string input){
-        if(Game.control.player.movement.rolling && input == "LightAttack") {
-            Debug.Log("turn to roll attakc");
+        if(Game.control.player.movement.rolling && input == "LightAttack")
             input = "RollAttack";
-        }
+            
         inputQueue.Add(input);
     }
 

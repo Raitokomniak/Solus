@@ -66,7 +66,7 @@ public class PlayerTargeting : MonoBehaviour
     }
 
     void Strafe(){
-        if(Game.control.player.attack.restrictedMovement) return;
+//if(Game.control.player.attack.restrictedMovement) return;
         
         m.moveInput = m.moveInput.normalized;
         m.moveDir = (m.player.cameraT.right*m.moveInput.x) + (Vector3.Cross(m.player.cameraT.right, Vector3.up) * m.moveInput.y).normalized;
