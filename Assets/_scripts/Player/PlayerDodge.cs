@@ -5,6 +5,7 @@ using UnityEngine;
 public class PlayerDodge : MonoBehaviour
 {
     Vector3 rollMoveDir;
+    Quaternion rollMoveRot;
 
     PlayerMovement m;
     void Awake(){
@@ -40,7 +41,7 @@ public class PlayerDodge : MonoBehaviour
     //////////////////////////////////////////
 
     public void StartRoll(Vector2 moveInput){
-        CorrectRotationForRoll(moveInput);
+        transform.rotation = Quaternion.LookRotation(m.moveDir);
         m.strafeRoll = m.strafing;
         m.strafing = false;
         m.canMove = false;
@@ -56,12 +57,14 @@ public class PlayerDodge : MonoBehaviour
     
     void ForcedRollMovement(){
        m.moveSpeed = Game.control.player.animator.GetFloat("RollSpeed") * m.properties.rollSpeed * 2;
+       transform.rotation = Quaternion.LookRotation(m.moveDir);
        transform.position += rollMoveDir * m.moveSpeed * Time.deltaTime;
     }
 
 
     //Invoked from animationevent
     public void EndRoll(){
+        Debug.Log("endroll");
         m.rolling = false;
         rollMoveDir = Vector3.zero;
         
@@ -71,9 +74,8 @@ public class PlayerDodge : MonoBehaviour
         }
     }
 
-    void CorrectRotationForRoll(Vector2 moveInput){
-        m.moveDir = (m.player.cameraT.right*moveInput.x) + (Vector3.Cross(m.player.cameraT.right, Vector3.up) * moveInput.y).normalized;
-        transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(m.moveDir), m.properties.turnSpeed);
+    public void StoreMoveDir(Vector3 dir){
+        rollMoveRot = Quaternion.LookRotation(dir);
     }
 
 

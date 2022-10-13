@@ -4,13 +4,15 @@ using UnityEngine;
 
 public class PlayerAttack : MonoBehaviour
 {
+    PlayerMovement m;
     InputQueueing inputQ;
     PlayerHandler player;
 
     public bool attacking;
-    public bool restrictedMovement;
+    public bool restrictedMovement, restrictedRotation;
 
     public bool canCombo;
+    public bool middleOfCombo;
 
     string combo;
 
@@ -20,22 +22,29 @@ public class PlayerAttack : MonoBehaviour
 
     void LateUpdate(){
         if(player == null && Game.control != null) player = Game.control.player;
+        if(m == null) m = player.movement;
 
         CheckNextAction();
 
         if(Input.GetButtonDown("LightAttack")){
             
-            if(inputQ.InMiddleOfAction())
-                inputQ.QueueInput("LightAttack");
-            else LightAttack();
-
+            if(!middleOfCombo){
+                if(inputQ.InMiddleOfAction())
+                    inputQ.QueueInput("LightAttack");
+                else LightAttack();
+            }
             if(canCombo) ComboAttack();
         }
+
+       /* if(attacking){
+            transform.rotation = Quaternion.LookRotation(m.moveDir);
+        }*/
     }
 
     void ComboAttack(){
         player.Animate(combo);
         attacking = true;
+        middleOfCombo = true;
     }
 
     public void EnableCombo(string combo){
@@ -44,7 +53,17 @@ public class PlayerAttack : MonoBehaviour
     }
     void CheckNextAction(){
         string nextAction = inputQ.CheckQueue();
-        if(nextAction == "LightAttack") LightAttack();
+        if(nextAction == "LightAttack") {
+            LightAttack();
+        }
+        else if(nextAction == "RollAttack"){
+           RollAttack();
+        }
+    }
+
+    void RollAttack(){
+        player.Animate("RollAttack");
+        attacking = true;
     }
 
     void LightAttack(){
@@ -56,8 +75,13 @@ public class PlayerAttack : MonoBehaviour
         restrictedMovement = toggle > 0;
     }
 
+    void RestrictRotation(int toggle){
+        restrictedRotation = toggle > 0;
+    }
+
     public void EndAttack(){
         attacking = false;
         canCombo = false;
+        middleOfCombo = false;
     }
 }

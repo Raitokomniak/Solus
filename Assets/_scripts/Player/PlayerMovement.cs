@@ -8,7 +8,7 @@ public class MovementProperties {
     public float walkSpeed = 2f;
     public float runSpeed = 5f;
     public float sprintSpeed = 10f;
-    public float turnSpeed = 15f;
+    public float turnSpeed = 5f;
     public float rollSpeed = 8.5f;
     public float backstepSpeed = 6f;
     
@@ -49,8 +49,6 @@ public class PlayerMovement : MonoBehaviour
     Timer idleTimer;
 
 
-
-
     void Awake(){
         properties = new MovementProperties();
         pTurn = GetComponent<PlayerTurnAnimation>();
@@ -84,10 +82,10 @@ public class PlayerMovement : MonoBehaviour
     void FixedUpdate() {
         
         if(properties == null) properties = new MovementProperties();
-
-        
-
-        if (!strafing) if(CanMove()) Move();
+        if (!strafing) { 
+            if(CanMove()) Move();
+            if(CanRotate()) Rotate();
+        }
         CheckRestraints();
     }
 
@@ -102,25 +100,36 @@ public class PlayerMovement : MonoBehaviour
         return true;
     }
 
+    bool CanRotate(){
+        if(Game.control.player.attack.restrictedRotation) return false;
+        if(rolling) return false;
+        return true;
+    }
+
     void Move(){
+        
         if(moveInput.magnitude > 1) {
             if(moveInput.x > 0.7f) moveInput.x = moveInput.x * 0.75f;
             if(moveInput.y > 0.7f) moveInput.y = moveInput.y * 0.75f;
         }
-        
-        moveDir = (Camera.main.gameObject.transform.right*moveInput.x) + (Vector3.Cross(Camera.main.gameObject.transform.right, Vector3.up) * moveInput.y);//normalized
-
-        transform.position += moveDir.normalized.magnitude * transform.forward * moveInput.magnitude * moveSpeed * Time.deltaTime;
+        moveDir = (Camera.main.gameObject.transform.right*moveInput.x) + (Vector3.Cross(Camera.main.gameObject.transform.right, Vector3.up) * moveInput.y );//normalized
+        transform.position += moveDir.normalized.magnitude * transform.forward * moveSpeed * Time.deltaTime;
         DetermineMoveSpeed();
-        Rotate();
+        //Rotate();
     }
 
     void Rotate(){
         if(Game.control.player.rb.velocity != Vector3.zero && Game.control.player.rb.velocity.magnitude > 0) lookRot = Quaternion.LookRotation(Game.control.player.rb.velocity); 
         
+        if(!CanMove() && CanRotate()) {
+            moveDir = (Camera.main.gameObject.transform.right*moveInput.x) + (Vector3.Cross(Camera.main.gameObject.transform.right, Vector3.up) * moveInput.y );//normalized
+            if(moveDir.magnitude != 0) lookRot =  Quaternion.LookRotation(moveDir);
+            else lookRot = Quaternion.LookRotation(transform.forward);
+        }
+
         if(moveDir.magnitude <= 0) lookRot = Quaternion.LookRotation(transform.forward);
         else lookRot = Quaternion.LookRotation(moveDir);
-        
+       /// else lookRot.eulerAngles += new Vector3(0, Quaternion.LookRotation(moveDir).eulerAngles.y, 0);
         float turnS = 0;
         turnS = properties.turnSpeed * Time.deltaTime;
         transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, turnS);
@@ -130,6 +139,8 @@ public class PlayerMovement : MonoBehaviour
         if(!moving) return;
         if(!sprinting && Input.GetButton("Sprint")) sprintTimer.Tick();
         
+        if(moveDir.magnitude != 0) pDodge.StoreMoveDir(moveDir);
+
         if(!sprintTimer.TimeOut() && Input.GetButtonUp("Roll")) {
             sprintTimer.Reset();
             if(inputQ.InMiddleOfAction()) inputQ.QueueInput("Roll");
