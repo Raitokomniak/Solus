@@ -8,11 +8,13 @@ public class PlayerDodge : MonoBehaviour
     Quaternion rollMoveRot;
 
     PlayerMovement m;
+    PlayerAttack a;
 
     bool canChain;
 
     void Awake(){
         m = GetComponent<PlayerMovement>();
+        a = GetComponent<PlayerAttack>();
     }
 
     void FixedUpdate(){
@@ -25,8 +27,18 @@ public class PlayerDodge : MonoBehaviour
         CheckNextAction();
 
         if(!m.moving && Input.GetButtonDown("Backstep")) {
-            if(m.InMiddleOfMovementAction()) m.inputQ.QueueInput("Backstep");
-            else StartBackStep();
+            if(m.InMiddleOfMovementAction()) {
+                Debug.Log("inmiddle movement");
+                m.inputQ.QueueInput("Backstep");
+            } 
+            else if(a.InMiddleOfCombatAction() && !a.CanChain())  {
+                Debug.Log("inmiddle cant chain");
+                m.inputQ.QueueInput("Backstep");
+            }
+            else {
+                Debug.Log("default");
+                StartBackStep();
+            }
         }
     }
 
@@ -40,8 +52,14 @@ public class PlayerDodge : MonoBehaviour
                 m.inputQ.ClearQueue();
             }
             if(nextAction == "Backstep") {
-                StartBackStep();
-                m.inputQ.ClearQueue();
+                if(a.InMiddleOfCombatAction() && a.CanChain()){
+                    StartBackStep();
+                    m.inputQ.ClearQueue();
+                }
+                else if(!a.InMiddleOfCombatAction()){
+                    StartBackStep();
+                    m.inputQ.ClearQueue();
+                }
             }
         }
     }
@@ -55,6 +73,10 @@ public class PlayerDodge : MonoBehaviour
 
     public void StartRoll(Vector2 moveInput){
 //        Debug.Log("startroll");
+        if(a.attacking) a.attacking = false;
+        a.canCombo = false;
+
+        m.canChain = false;
         transform.rotation = Quaternion.LookRotation(m.moveDir);
         m.strafeRoll = m.strafing;
         m.strafing = false;
@@ -99,6 +121,10 @@ public class PlayerDodge : MonoBehaviour
     //////////////////////////////////////////
 
     void StartBackStep(){
+        if(a.attacking) a.attacking = false;
+        a.canCombo = false;
+
+        m.canChain = false;
         m.backstepping = true;
         m.canMove = false;
         m.moveSpeed = m.properties.backstepSpeed;

@@ -23,9 +23,8 @@ public class PlayerMovement : MonoBehaviour
 {   
     public InputQueueing inputQ;
     public PlayerHandler player;
-    
-    PlayerTurnAnimation pTurn;
     PlayerDodge pDodge;
+    PlayerAttack pA;
     
     public MovementProperties properties;
     
@@ -33,8 +32,6 @@ public class PlayerMovement : MonoBehaviour
 
     //inputs
     public Vector2 moveInput;
-    public Vector2 moveInputRaw;
-    public Vector2 lastInputRaw;
 
     //vectors
     public Vector3 moveDir;
@@ -51,8 +48,8 @@ public class PlayerMovement : MonoBehaviour
 
     void Awake(){
         properties = new MovementProperties();
-        pTurn = GetComponent<PlayerTurnAnimation>();
         pDodge = GetComponent<PlayerDodge>();
+        pA = GetComponent<PlayerAttack>();
         //player = Game.control.player;
     
         sprintTimer = new Timer(0.5f);
@@ -62,7 +59,6 @@ public class PlayerMovement : MonoBehaviour
         canMove = true;
 
         moveInput = new Vector2();
-        lastInputRaw = new Vector2(-100, -100);
         init = true;
     }
 
@@ -72,8 +68,9 @@ public class PlayerMovement : MonoBehaviour
 
     void LateUpdate() {
         moveInput = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
-        moveInputRaw = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
         moving = moveInput.magnitude > 0;
+
+        if(!rolling && !backstepping) canChain = false;
 
         DetermineSprint();
         CheckIdling();
@@ -84,7 +81,7 @@ public class PlayerMovement : MonoBehaviour
         if(properties == null) properties = new MovementProperties();
         DetermineMoveSpeed();
 
-        if(Game.control.player.attack.attacking) transform.position += transform.forward * moveSpeed * 10 * Time.deltaTime;
+        if(pA.attacking) transform.position += transform.forward * moveSpeed * 10 * Time.deltaTime;
 
         if (!strafing) { 
             if(CanMove()) Move();
@@ -100,7 +97,7 @@ public class PlayerMovement : MonoBehaviour
     bool CanMove(){
         if(rolling) return false;
         if(backstepping) return false;
-        if(Game.control.player.attack.attacking) return false;
+        if(pA.attacking) return false;
         return true;
     }
 
@@ -110,18 +107,16 @@ public class PlayerMovement : MonoBehaviour
     }
 
     void Move(){
-        
+        CorrectDiagonal();
+        moveDir = (Camera.main.gameObject.transform.right*moveInput.x) + (Vector3.Cross(Camera.main.gameObject.transform.right, Vector3.up) * moveInput.y );//normalized
+        transform.position += moveDir.normalized.magnitude * transform.forward * moveSpeed * Time.deltaTime;
+    }
+
+    void CorrectDiagonal(){
         if(moveInput.magnitude > 1) {
             if(moveInput.x > 0.7f) moveInput.x = moveInput.x * 0.75f;
             if(moveInput.y > 0.7f) moveInput.y = moveInput.y * 0.75f;
         }
-        
-        
-
-        moveDir = (Camera.main.gameObject.transform.right*moveInput.x) + (Vector3.Cross(Camera.main.gameObject.transform.right, Vector3.up) * moveInput.y );//normalized
-        transform.position += moveDir.normalized.magnitude * transform.forward * moveSpeed * Time.deltaTime;
-        
-        //Rotate();
     }
 
     void Rotate(){
@@ -169,7 +164,7 @@ public class PlayerMovement : MonoBehaviour
         running = speed >= properties.runThreshold;
         if(running) moveSpeed = properties.runSpeed;
         if(sprinting) moveSpeed = properties.sprintSpeed;
-        if(Game.control.player.attack.attacking) moveSpeed = Game.control.player.animator.GetFloat("MoveSpeed");
+        if(pA.attacking) moveSpeed = Game.control.player.animator.GetFloat("MoveSpeed");
         
 
         Game.control.player.Animate("Running", (Mathf.Abs(moveInput.x) > 0.2 || Mathf.Abs(moveInput.y) > 0.2f));
@@ -197,11 +192,6 @@ public class PlayerMovement : MonoBehaviour
             Game.control.player.Animate("Idling", false);
             idleTimer.Reset();
         }
-    }
-
-    //invoked from animation event
-    public void CanMove(int toggle){
-        canMove = toggle > 0;
     }
 
 }

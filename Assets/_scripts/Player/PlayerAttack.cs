@@ -33,6 +33,11 @@ public class PlayerAttack : MonoBehaviour
         }
     }
 
+    public bool CanChain(){
+        if(attacking && canCombo) return true;
+        return false;
+    }
+
     void ComboAttack(){
         Debug.Log("comboattack");
         player.Animate(combo);
