@@ -8,6 +8,9 @@ public class PlayerDodge : MonoBehaviour
     Quaternion rollMoveRot;
 
     PlayerMovement m;
+
+    bool canChain;
+
     void Awake(){
         m = GetComponent<PlayerMovement>();
     }
@@ -22,25 +25,36 @@ public class PlayerDodge : MonoBehaviour
         CheckNextAction();
 
         if(!m.moving && Input.GetButtonDown("Backstep")) {
-            if(m.inputQ.InMiddleOfAction()) m.inputQ.QueueInput("Backstep");
+            if(m.InMiddleOfMovementAction()) m.inputQ.QueueInput("Backstep");
             else StartBackStep();
         }
     }
 
     void CheckNextAction(){
-        string nextAction = m.inputQ.CheckQueue();
-        if(m.inputQ.CheckQueue() == "Roll"){
-            if(m.moveInput.magnitude == 0) nextAction = "Backstep";
-            else StartRoll(m.moveInput);
+        if(!m.InMiddleOfMovementAction()){
+            string nextAction = m.inputQ.CheckQueue();
+            if(nextAction == "Roll"){
+            // Debug.Log("next is roll");
+                if(m.moveInput.magnitude == 0) nextAction = "Backstep";
+                else StartRoll(m.moveInput);
+                m.inputQ.ClearQueue();
+            }
+            if(nextAction == "Backstep") {
+                StartBackStep();
+                m.inputQ.ClearQueue();
+            }
         }
-        if(nextAction == "Backstep") StartBackStep();
     }
+
+    
+
 
     //////////////////////////////////////////
     // ROLL
     //////////////////////////////////////////
 
     public void StartRoll(Vector2 moveInput){
+//        Debug.Log("startroll");
         transform.rotation = Quaternion.LookRotation(m.moveDir);
         m.strafeRoll = m.strafing;
         m.strafing = false;
@@ -64,7 +78,7 @@ public class PlayerDodge : MonoBehaviour
 
     //Invoked from animationevent
     public void EndRoll(){
-        Debug.Log("endroll");
+    //   Debug.Log("endroll");
         m.rolling = false;
         rollMoveDir = Vector3.zero;
         
@@ -72,6 +86,7 @@ public class PlayerDodge : MonoBehaviour
             m.strafing = true;
             m.strafeRoll = false;
         }
+        canChain = false;
     }
 
     public void StoreMoveDir(Vector3 dir){

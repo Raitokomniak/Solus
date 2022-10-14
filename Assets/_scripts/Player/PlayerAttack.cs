@@ -14,6 +14,7 @@ public class PlayerAttack : MonoBehaviour
 
     string combo;
 
+
     void Awake(){
         inputQ = GetComponent<InputQueueing>();
     }
@@ -25,13 +26,10 @@ public class PlayerAttack : MonoBehaviour
         CheckNextAction();
 
         if(Input.GetButtonDown("LightAttack")){
-            if(canCombo) ComboAttack();
-            if(!middleOfCombo){
-                if(inputQ.InMiddleOfAction())
-                    inputQ.QueueInput("LightAttack");
-                else LightAttack();
-            }
-            
+            if(m.InMiddleOfMovementAction())    inputQ.QueueInput("RollAttack");
+            else if(InMiddleOfCombatAction()) inputQ.QueueInput("ComboAttack");
+            else if(canCombo) ComboAttack();
+            else if(!attacking) LightAttack();
         }
     }
 
@@ -43,8 +41,13 @@ public class PlayerAttack : MonoBehaviour
     }
 
     public void EnableCombo(string combo){
-       this.combo = combo;
-       canCombo = true;
+        this.combo = combo;
+        canCombo = true;
+
+        if(inputQ.CheckQueue() == "ComboAttack"){
+            ComboAttack();
+            m.inputQ.ClearQueue();
+       }
     }
 
     public void DisableCombo(){
@@ -52,14 +55,43 @@ public class PlayerAttack : MonoBehaviour
     }
 
     void CheckNextAction(){
-        string nextAction = inputQ.CheckQueue();
-        if(nextAction == "LightAttack") {
-            LightAttack();
+
+        if(!m.InMiddleOfMovementAction()){
+            string nextAction = inputQ.CheckQueue();
+            if(nextAction == "LightAttack") {
+                LightAttack();
+                m.inputQ.ClearQueue();
+            }
+            /* if(nextAction == "ComboAttack"){
+                IEnumerator waitForCombo = WaitForComboEnabled();
+                StartCoroutine(waitForCombo);
+            }*/
+            
         }
-        else if(nextAction == "RollAttack"){
-           RollAttack();
+        else if(m.canChain){
+            string nextAction = inputQ.CheckQueue();
+            if(nextAction == "RollAttack"){
+                Debug.Log("rollattack");
+                RollAttack();
+                m.inputQ.ClearQueue();
+            }
         }
+
     }
+
+
+    public bool InMiddleOfCombatAction(){
+        if(Game.control.player.attack.attacking) return true;
+        return false;
+    }
+
+    
+    IEnumerator WaitForComboEnabled(){
+        yield return new WaitUntil(() => canCombo == true);
+        Debug.Log("next c");
+        ComboAttack();
+    }
+
 
     void RollAttack(){
         player.Animate("RollAttack");

@@ -51,7 +51,7 @@ public class PlayerTargeting : MonoBehaviour
     }
 
     IEnumerator StrafeWaitForRoll(bool tostrafe){
-        if(m.inputQ.InMiddleOfAction()){
+        if(m.InMiddleOfMovementAction()){
             yield return new WaitUntil(() => m.rolling == false);
             yield return new WaitUntil(() => m.backstepping == false);
         }

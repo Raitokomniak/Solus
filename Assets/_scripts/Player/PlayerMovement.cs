@@ -41,7 +41,7 @@ public class PlayerMovement : MonoBehaviour
     public float moveSpeed;
     Quaternion lookRot;
 
-    public bool canMove, idling, moving, running, sprinting, backstepping, rolling, strafeRoll, strafing, turning;
+    public bool canMove, idling, moving, running, sprinting, backstepping, rolling, strafeRoll, strafing, turning, canChain;
 
     public bool init = false;
 
@@ -149,7 +149,7 @@ public class PlayerMovement : MonoBehaviour
 
         if(!sprintTimer.TimeOut() && Input.GetButtonUp("Roll")) {
             sprintTimer.Reset();
-            if(inputQ.InMiddleOfAction()) inputQ.QueueInput("Roll");
+            if(InMiddleOfMovementAction()) inputQ.QueueInput("Roll");
             else pDodge.StartRoll(moveInput);
         }
         if(sprintTimer.TimeOut()) {
@@ -158,13 +158,19 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
+    public bool InMiddleOfMovementAction(){
+        if(rolling) return true;
+        if(backstepping) return true;
+        return false;
+    }
+
     void DetermineMoveSpeed(){
         float speed = moveInput.magnitude;
         running = speed >= properties.runThreshold;
         if(running) moveSpeed = properties.runSpeed;
         if(sprinting) moveSpeed = properties.sprintSpeed;
         if(Game.control.player.attack.attacking) moveSpeed = Game.control.player.animator.GetFloat("MoveSpeed");
-
+        
 
         Game.control.player.Animate("Running", (Mathf.Abs(moveInput.x) > 0.2 || Mathf.Abs(moveInput.y) > 0.2f));
         Game.control.player.Animate("Sprinting", sprinting);
@@ -175,7 +181,9 @@ public class PlayerMovement : MonoBehaviour
         else Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
     }
 
-
+    public void CanChain(){
+        canChain = true;
+    }
     void CheckIdling(){
         if(!idling && !Input.anyKeyDown && moveInput.magnitude == 0) {
             idleTimer.Tick();

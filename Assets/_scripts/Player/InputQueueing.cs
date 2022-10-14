@@ -4,60 +4,31 @@ using UnityEngine;
 
 public class InputQueueing : MonoBehaviour
 {
-    List<string> inputQueue;
+    string nextAction;
     Timer inputTimer;
 
-    public bool rollAttack;
-
-
-
     void Awake(){
-        inputQueue = new List<string>();
         inputTimer = new Timer(1f);
     }
 
-    //////////////////////////////////////////
-    // INPUT QUEUEING
-    //////////////////////////////////////////
-
-    public bool InMiddleOfAction(){
-        if(Game.control.player.movement.rolling) return true;
-        if(Game.control.player.movement.backstepping) return true;
-        if(Game.control.player.attack.attacking) return true;
-        return false;
-    }
-    
-    public string CheckQueue(){
-        if(inputQueue.Count > 0){
-            CalculateInputLifeTime();
-            if(!InMiddleOfAction()) return CheckQueueForInputs();
-        }
-        return "";
+    void Update(){
+        CalculateInputLifeTime();
     }
 
-    
-    public void QueueInput(string input){
-        if(Game.control.player.movement.rolling && input == "LightAttack")
-            input = "RollAttack";
-            
-        inputQueue.Add(input);
-    }
+    public void ClearQueue(){ nextAction = ""; }
 
+    public string CheckQueue(){ return nextAction; }
 
-    public string CheckQueueForInputs(){
-        if(inputQueue.Count > 0){
-            string nextAction = inputQueue[0];
-            inputQueue.Clear();
-            return nextAction;
-        }
-        return "";
-    }
+    public void QueueInput(string input){ nextAction = input; }
+
 
     public void CalculateInputLifeTime(){
-        if(!inputTimer.TimeOut()) inputTimer.Tick();
-        else if(inputTimer.TimeOut()) {   
-            inputQueue.Clear();
-            inputTimer.Reset();
+        if(nextAction != ""){
+            if(!inputTimer.TimeOut()) inputTimer.Tick();
+            else if(inputTimer.TimeOut()) {
+                nextAction = "";
+                inputTimer.Reset();
+            }
         }
     }
 
