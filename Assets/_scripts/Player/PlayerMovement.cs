@@ -145,7 +145,13 @@ public class PlayerMovement : MonoBehaviour
         if(!sprintTimer.TimeOut() && Input.GetButtonUp("Roll")) {
             sprintTimer.Reset();
             if(InMiddleOfMovementAction()) inputQ.QueueInput("Roll");
-            else pDodge.StartRoll(moveInput);
+            else {
+                if(pA.InMiddleOfCombatAction() && pA.CanChain()){
+                    pDodge.StartRoll(moveInput);
+                }
+                if(!pA.InMiddleOfCombatAction())
+                    pDodge.StartRoll(moveInput);
+            }
         }
         if(sprintTimer.TimeOut()) {
             sprinting = Input.GetButton("Sprint");

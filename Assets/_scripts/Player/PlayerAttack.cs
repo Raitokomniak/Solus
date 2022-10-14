@@ -12,11 +12,23 @@ public class PlayerAttack : MonoBehaviour
     public bool canCombo;
     public bool middleOfCombo;
 
+    Timer heavyAxisTimer;
+    float heavyAxis = 0;
+
     string combo;
 
 
     void Awake(){
         inputQ = GetComponent<InputQueueing>();
+        heavyAxisTimer = new Timer(0.5f);
+    }
+
+    bool HeavyInput(){
+        if(!heavyAxisTimer.Ticking() && Input.GetAxis("HeavyAttack") > 0) {
+            heavyAxisTimer.Start();
+            return true;
+        }
+        return false;
     }
 
     void LateUpdate(){
@@ -24,13 +36,64 @@ public class PlayerAttack : MonoBehaviour
         if(m == null) m = player.movement;
 
         CheckNextAction();
+        if(heavyAxisTimer.Ticking()) heavyAxisTimer.Tick();
+        if(heavyAxisTimer.TimeOut()) {
+            heavyAxisTimer.Reset();
+            heavyAxisTimer.Stop();
+        }
 
+        if(!attacking) {
+            canCombo = false;
+            Game.control.player.animator.ResetTrigger("LightLightCombo");
+        }
+
+        if(m.InMiddleOfMovementAction()){
+            if(Input.GetButtonDown("LightAttack")) 
+                inputQ.QueueInput("RollAttack");
+            else if(HeavyInput()) {
+                inputQ.QueueInput("HeavyAttack");
+            }
+        }
+        else if(InMiddleOfCombatAction()) {
+            if(Input.GetButtonDown("LightAttack")){
+                if(canCombo) ComboAttack();
+                else inputQ.QueueInput("ComboAttack");
+            }
+            else if(HeavyInput()){
+                if(canCombo) HeavyAttack();
+                else inputQ.QueueInput("HeavyAttack");
+            }
+        }
+        else if(!attacking){
+            if(Input.GetButtonDown("LightAttack")) LightAttack();
+            else if(HeavyInput()) HeavyAttack();
+        }
+
+/*
         if(Input.GetButtonDown("LightAttack")){
-            if(m.InMiddleOfMovementAction())    inputQ.QueueInput("RollAttack");
-            else if(InMiddleOfCombatAction()) inputQ.QueueInput("ComboAttack");
-            else if(canCombo) ComboAttack();
+            if(m.InMiddleOfMovementAction())  inputQ.QueueInput("RollAttack");
+            else if(InMiddleOfCombatAction()) {
+                if(canCombo) ComboAttack();
+                else inputQ.QueueInput("ComboAttack");
+            }
             else if(!attacking) LightAttack();
         }
+        else if(!heavyAxisTimer.Ticking() && Input.GetAxis("HeavyAttack") > 0){
+            heavyAxisTimer.Start();
+            if(m.InMiddleOfMovementAction())  {
+                Debug.Log("inmiddleofmovement");
+                inputQ.QueueInput("HeavyAttack");
+            }
+            else if(InMiddleOfCombatAction()) {
+                Debug.Log("inmiddleofcombat");
+                if(canCombo) HeavyAttack();
+                else inputQ.QueueInput("HeavyAttack");
+            }
+            else if(!attacking) {
+                Debug.Log("not attacking");
+                HeavyAttack();
+            }
+        }*/
     }
 
     public bool CanChain(){
@@ -39,7 +102,7 @@ public class PlayerAttack : MonoBehaviour
     }
 
     void ComboAttack(){
-        Debug.Log("comboattack");
+      //  Debug.Log("comboattack");
         player.Animate(combo);
         attacking = true;
         middleOfCombo = true;
@@ -67,21 +130,22 @@ public class PlayerAttack : MonoBehaviour
                 LightAttack();
                 m.inputQ.ClearQueue();
             }
-            /* if(nextAction == "ComboAttack"){
-                IEnumerator waitForCombo = WaitForComboEnabled();
-                StartCoroutine(waitForCombo);
-            }*/
-            
+            if(InMiddleOfCombatAction() && canCombo){
+                if(nextAction == "HeavyAttack"){
+                    HeavyAttack();
+                    m.inputQ.ClearQueue();
+                }
+            }
         }
         else if(m.canChain){
-            string nextAction = inputQ.CheckQueue();
-            if(nextAction == "RollAttack"){
-                Debug.Log("rollattack");
+            if(inputQ.CheckQueue() == "RollAttack"){
+         //       Debug.Log("rollattack");
                 RollAttack();
                 m.inputQ.ClearQueue();
             }
+           
         }
-
+        
     }
 
 
@@ -105,6 +169,13 @@ public class PlayerAttack : MonoBehaviour
 
     void LightAttack(){
         player.Animate("LightAttack");
+        attacking = true;
+    }
+
+    void HeavyAttack(){
+        Debug.Log("here");
+     //   m.canChain = false;
+        player.Animate("HeavyAttack");
         attacking = true;
     }
 

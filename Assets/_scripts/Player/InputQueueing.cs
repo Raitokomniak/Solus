@@ -19,7 +19,10 @@ public class InputQueueing : MonoBehaviour
 
     public string CheckQueue(){ return nextAction; }
 
-    public void QueueInput(string input){ nextAction = input; }
+    public void QueueInput(string input){
+        Debug.Log("queue " + input);
+        nextAction = input; 
+    }
 
 
     public void CalculateInputLifeTime(){
