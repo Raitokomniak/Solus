@@ -4,11 +4,11 @@ using UnityEngine;
 
 public class MeleeWeapon : MonoBehaviour
 {
-    Collider collider;
+    Collider swordCollider;
     bool colliderOn = true;
     
     void Awake(){
-        collider = GetComponentInChildren<BoxCollider>();
+        swordCollider = GetComponentInChildren<BoxCollider>();
     }
 
     void Update(){
@@ -16,6 +16,6 @@ public class MeleeWeapon : MonoBehaviour
     }
 
     void DisableCollider(){
-        collider.enabled = false;
+        swordCollider.enabled = false;
     }
 }

@@ -13,7 +13,6 @@ public class PlayerAttack : MonoBehaviour
     public bool middleOfCombo;
 
     Timer heavyAxisTimer;
-    float heavyAxis = 0;
 
     string combo;
 

@@ -8,7 +8,7 @@ public class MovementProperties {
     public float walkSpeed = 2f;
     public float runSpeed = 5f;
     public float sprintSpeed = 10f;
-    public float turnSpeed = 10f;
+    public float turnSpeed = 15f;
     public float rollSpeed = 8.5f;
     public float backstepSpeed = 6f;
     
@@ -109,7 +109,7 @@ public class PlayerMovement : MonoBehaviour
     void Move(){
         CorrectDiagonal();
         moveDir = (Camera.main.gameObject.transform.right*moveInput.x) + (Vector3.Cross(Camera.main.gameObject.transform.right, Vector3.up) * moveInput.y );//normalized
-        transform.position += moveDir.normalized.magnitude * transform.forward * moveSpeed * Time.deltaTime;
+        transform.position += moveDir.normalized.magnitude * transform.forward * moveInput.magnitude * moveSpeed * Time.deltaTime;
     }
 
     void CorrectDiagonal(){

@@ -10,8 +10,6 @@ public class PlayerDodge : MonoBehaviour
     PlayerMovement m;
     PlayerAttack a;
 
-    bool canChain;
-
     void Awake(){
         m = GetComponent<PlayerMovement>();
         a = GetComponent<PlayerAttack>();
@@ -113,7 +111,6 @@ public class PlayerDodge : MonoBehaviour
             m.strafing = true;
             m.strafeRoll = false;
         }
-        canChain = false;
     }
 
     public void StoreMoveDir(Vector3 dir){
