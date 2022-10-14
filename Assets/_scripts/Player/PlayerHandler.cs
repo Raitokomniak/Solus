@@ -11,6 +11,7 @@ public class PlayerHandler : MonoBehaviour
     public PlayerAttack attack;
     public PlayerTargetingRange targetingRange;
     public PlayerTargeting pTarget;
+    public PlayerHealth pHealth;
 
     public Animator animator;
 
@@ -20,6 +21,7 @@ public class PlayerHandler : MonoBehaviour
         animator = GetComponent<Animator>();
         cameraT = Camera.main.gameObject.transform;
         pTarget = GetComponent<PlayerTargeting>();
+        pHealth = GetComponent<PlayerHealth>();
     }
 
     public void TargetEnemy(bool toggle, Transform target){

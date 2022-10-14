@@ -9,6 +9,8 @@ public class Game : MonoBehaviour
 
     public CameraMovement cam;
 
+    bool started = false;
+
     void Awake(){
         if (control	 == null) {
 			DontDestroyOnLoad (gameObject);
@@ -18,6 +20,18 @@ public class Game : MonoBehaviour
 		}
 
         player = GameObject.FindWithTag("Player").GetComponent<PlayerHandler>();
+        player.gameObject.SetActive(false);
         cam = Camera.main.GetComponent<CameraMovement>();
+    }
+
+    void Update(){
+        if(!started && Input.GetKeyDown(KeyCode.Return)){
+            StartGame();
+        }
+    }
+
+    void StartGame(){
+        started = true;
+        player.gameObject.SetActive(true);
     }
 }
