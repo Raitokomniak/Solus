@@ -15,7 +15,8 @@ public class CameraMovement : MonoBehaviour
     public bool targeting;
 
     bool camlocked;
-    float tempz;
+    float zDistance = -4;
+
 
     void Awake(){
         offSet = new Vector3(0,-1.5f,3);
@@ -49,17 +50,19 @@ public class CameraMovement : MonoBehaviour
         float camDistanceToEnemy = camDistanceVector.magnitude;
         
         targetRot = Quaternion.LookRotation(transform.position - target.position);
-        transform.position = player.position - (targetRot * new Vector3(0,-2,-4));
+        transform.position = player.position - (targetRot * new Vector3(0,-2,zDistance));
         transform.LookAt(target);
         
         //correct rotation
         if(transform.rotation.eulerAngles.x> 19.5f) transform.rotation = Quaternion.Euler(19.5f, transform.rotation.eulerAngles.y, 0);
         //correct y pos
         if(transform.position.y > 2) transform.position = new Vector3(transform.position.x, 2, transform.position.z);
-        //correct z pos
-        camlocked = playerDistanceToEnemy < 5;
-        if(camlocked) tempz = transform.position.z;
-        if(playerDistanceToEnemy < 4) transform.position = new Vector3(transform.position.x,transform.position.y,tempz);
+        //correct z pos        
+        camlocked = playerDistanceToEnemy < 1;
+        if(camlocked) {
+            zDistance = -4 - (1 - playerDistanceToEnemy);
+        }
+        else zDistance = -4;
     }
 
     void FollowPlayer(){

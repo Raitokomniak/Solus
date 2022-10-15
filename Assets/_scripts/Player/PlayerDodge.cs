@@ -25,18 +25,14 @@ public class PlayerDodge : MonoBehaviour
         CheckNextAction();
 
         if(!m.moving && Input.GetButtonDown("Backstep")) {
-            if(m.InMiddleOfMovementAction()) {
-        //        Debug.Log("inmiddle movement");
+            if(m.InMiddleOfMovementAction()  && !m.canChain)
                 m.inputQ.QueueInput("Backstep");
-            } 
-            else if(a.InMiddleOfCombatAction() && !a.CanChain())  {
-         //       Debug.Log("inmiddle cant chain");
-                m.inputQ.QueueInput("Backstep");
-            }
-            else {
-         //       Debug.Log("default");
+            else if(m.InMiddleOfMovementAction() && m.canChain)
                 StartBackStep();
-            }
+            else if(a.InMiddleOfCombatAction() && !a.CanChain())
+                m.inputQ.QueueInput("Backstep");
+            else 
+                StartBackStep();
         }
     }
 

@@ -20,7 +20,7 @@ public class InputQueueing : MonoBehaviour
     public string CheckQueue(){ return nextAction; }
 
     public void QueueInput(string input){
-        Debug.Log("queue " + input);
+//        Debug.Log("queue " + input);
         nextAction = input; 
     }
 

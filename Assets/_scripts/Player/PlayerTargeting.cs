@@ -5,7 +5,7 @@ using UnityEngine;
 public class PlayerTargeting : MonoBehaviour
 {
     PlayerMovement m;
-    Transform strafeTarget;
+    public Transform strafeTarget;
 
     void Awake(){
         m = GetComponent<PlayerMovement>();
@@ -14,13 +14,17 @@ public class PlayerTargeting : MonoBehaviour
     void FixedUpdate(){
         if(!m.init) return;
         if(m.strafing) Strafe();
+        
+
     }
+    
 
 
     bool CanStrafe(){
         Debug.Log(m.rolling + "rolling");
         if(!Game.control.cam.targeting) return false;
         if(m.rolling) return false;
+        if(m.backstepping) return false;
         return true;
     }
 
@@ -67,7 +71,7 @@ public class PlayerTargeting : MonoBehaviour
 
     void Strafe(){
 //if(Game.control.player.attack.restrictedMovement) return;
-        
+        if(m.InMiddleOfMovementAction()) return;
         m.moveInput = m.moveInput.normalized;
         m.moveDir = (m.player.cameraT.right*m.moveInput.x) + (Vector3.Cross(m.player.cameraT.right, Vector3.up) * m.moveInput.y).normalized;
         if(strafeTarget == null) return;

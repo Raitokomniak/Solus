@@ -166,12 +166,21 @@ public class PlayerMovement : MonoBehaviour
     }
 
     void DetermineMoveSpeed(){
+        if(InMiddleOfMovementAction()) return;
+
         float speed = moveInput.magnitude;
         running = speed >= properties.runThreshold;
         if(running) moveSpeed = properties.runSpeed;
         if(sprinting) moveSpeed = properties.sprintSpeed;
         if(pA.attacking) moveSpeed = Game.control.player.animator.GetFloat("MoveSpeed");
-        
+
+        if(player.pTarget != null && !pA.attacking && player.pTarget.strafeTarget != null){
+            Vector3 playerDistanceVector = (transform.position - player.pTarget.strafeTarget.position);
+            float playerDistanceToEnemy = playerDistanceVector.magnitude;
+            if(playerDistanceToEnemy < 1) moveSpeed = properties.walkSpeed;
+            else moveSpeed = properties.runSpeed;
+        }
+
 
         Game.control.player.Animate("Running", (Mathf.Abs(moveInput.x) > 0.2 || Mathf.Abs(moveInput.y) > 0.2f));
         Game.control.player.Animate("Sprinting", sprinting);
@@ -185,6 +194,7 @@ public class PlayerMovement : MonoBehaviour
     public void CanChain(){
         canChain = true;
     }
+    
     void CheckIdling(){
         if(!idling && !Input.anyKeyDown && moveInput.magnitude == 0) {
             idleTimer.Tick();
