@@ -166,7 +166,7 @@ public class PlayerMovement : MonoBehaviour
     }
 
     void DetermineMoveSpeed(){
-        if(InMiddleOfMovementAction()) return;
+        //if(InMiddleOfMovementAction()) return;
 
         float speed = moveInput.magnitude;
         running = speed >= properties.runThreshold;
@@ -174,7 +174,10 @@ public class PlayerMovement : MonoBehaviour
         if(sprinting) moveSpeed = properties.sprintSpeed;
         if(pA.attacking) moveSpeed = Game.control.player.animator.GetFloat("MoveSpeed");
 
-        if(player.pTarget != null && !pA.attacking && player.pTarget.strafeTarget != null){
+
+        Debug.Log(GetComponent<Rigidbody>().velocity);
+        
+        if(player != null && !pA.attacking && player.pTarget.strafeTarget != null){
             Vector3 playerDistanceVector = (transform.position - player.pTarget.strafeTarget.position);
             float playerDistanceToEnemy = playerDistanceVector.magnitude;
             if(playerDistanceToEnemy < 1) moveSpeed = properties.walkSpeed;
@@ -188,7 +191,11 @@ public class PlayerMovement : MonoBehaviour
     
     void CheckRestraints(){
         if(moveInput.magnitude == 0) Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
-        else Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        else {
+            if(player.attack.attacking) Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
+            else Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        }
+        if(moveInput.magnitude > 0 && !player.attack.attacking) Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
     }
 
     public void CanChain(){

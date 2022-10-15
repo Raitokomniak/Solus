@@ -2,26 +2,43 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+
+public class PlayerStats {
+    public int maxStamina = 100;
+}
+
 public class PlayerHandler : MonoBehaviour
 {
     public Rigidbody rb;
-
-    public Transform cameraT;
     public PlayerMovement movement;
     public PlayerAttack attack;
     public PlayerTargetingRange targetingRange;
     public PlayerTargeting pTarget;
     public PlayerHealth pHealth;
 
+    public PlayerResources resources;
+
     public Animator animator;
 
+    public Transform cameraT;
+    
 
+    public PlayerStats stats;
+    
     void Awake(){
+        
+    }
+
+    public void Init(){
         rb = GetComponent<Rigidbody>();
         animator = GetComponent<Animator>();
         cameraT = Camera.main.gameObject.transform;
         pTarget = GetComponent<PlayerTargeting>();
         pHealth = GetComponent<PlayerHealth>();
+        resources = GetComponentInChildren<PlayerResources>();
+        stats = new PlayerStats();
+
+        resources.Init();
     }
 
     public void TargetEnemy(bool toggle, Transform target){
