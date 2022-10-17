@@ -5,17 +5,23 @@ using UnityEngine;
 public class MeleeWeapon : MonoBehaviour
 {
     Collider swordCollider;
-    bool colliderOn = true;
     
     void Awake(){
         swordCollider = GetComponentInChildren<BoxCollider>();
     }
 
     void Update(){
-        if(colliderOn && Game.control.player.pHealth.dead) DisableCollider();
+        swordCollider.enabled = EnableCollider();
     }
 
     void DisableCollider(){
         swordCollider.enabled = false;
+    }
+
+    bool EnableCollider(){
+        if(Game.control.player.movement.falling) return false;
+        if(Game.control.player.pHealth.dead) return false;
+        if(!Game.control.player.attack.attacking) return false;
+        return true;
     }
 }

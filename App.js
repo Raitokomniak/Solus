@@ -1,0 +1,32 @@
+import logo from './logo.svg';
+import {useEffect, useState} from 'react';
+import axios from 'axios';
+
+const URL="http://localhost:3001/"
+
+function App() {
+    const [tasks, setTasks] = useState([])
+
+    useEffect(() => {
+        axios.get(URL)
+            .then((response) => {
+                setTasks(response.data)
+            }).catch (error => {
+                alert(error)
+            })
+        }, [])
+
+
+  return (
+    <div className="App">
+        <h3> My tasks </h3>
+        <ol>
+            {tasks.map(task => (
+                <li key={task.id}>{task.description}</li>
+            ))}
+        </ol>
+    </div>
+  );
+}
+
+export default App;

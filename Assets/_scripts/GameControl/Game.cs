@@ -13,6 +13,8 @@ public class Game : MonoBehaviour
 
     bool started = false;
 
+    Vector3 playerOrigPos;
+
     void Awake(){
         if (control	 == null) {
 			DontDestroyOnLoad (gameObject);
@@ -22,16 +24,18 @@ public class Game : MonoBehaviour
 		}
 
         player = GameObject.FindWithTag("Player").GetComponent<PlayerHandler>();
+        playerOrigPos = player.transform.position;
         player.gameObject.SetActive(false);
         playerUI = GetComponent<PlayerUI>();
         cam = Camera.main.GetComponent<CameraMovement>();
-
         player.Init();
     }
 
     void Update(){
-        if(!started && Input.GetKeyDown(KeyCode.Return)){
+        if(Input.GetKeyDown(KeyCode.Return)){
             StartGame();
+            player.transform.position = playerOrigPos;
+            player.Init();
         }
     }
 
@@ -39,4 +43,6 @@ public class Game : MonoBehaviour
         started = true;
         player.gameObject.SetActive(true);
     }
+
+
 }

@@ -56,7 +56,7 @@ public class CameraMovement : MonoBehaviour
         //correct rotation
         if(transform.rotation.eulerAngles.x> 19.5f) transform.rotation = Quaternion.Euler(19.5f, transform.rotation.eulerAngles.y, 0);
         //correct y pos
-        if(transform.position.y > 2) transform.position = new Vector3(transform.position.x, 2, transform.position.z);
+        if(transform.position.y > 2) transform.position = new Vector3(transform.position.x, player.position.y + 2, transform.position.z);
         //correct z pos        
         camlocked = playerDistanceToEnemy < 1;
         if(camlocked) {

@@ -10,10 +10,8 @@ public class MovementProperties {
     public float sprintSpeed = 10f;
     public float turnSpeed = 15f;
     public float rollSpeed = 8.5f;
-    public float backstepSpeed = 6f;
-    
+    public float backstepSpeed = 8f;
     public float runThreshold = 0.2f;
-
 
     public MovementProperties(){}
 }
@@ -21,6 +19,8 @@ public class MovementProperties {
 
 public class PlayerMovement : MonoBehaviour
 {   
+
+    public Rigidbody rb;
     public InputQueueing inputQ;
     public PlayerHandler player;
     PlayerDodge pDodge;
@@ -28,7 +28,11 @@ public class PlayerMovement : MonoBehaviour
     
     public MovementProperties properties;
     
-   // GroundDetect groundDetect;
+    public GroundDetect groundDetect;
+
+
+    Timer sprintTimer, idleTimer;
+
 
     //inputs
     public Vector2 moveInput;
@@ -38,28 +42,25 @@ public class PlayerMovement : MonoBehaviour
     public float moveSpeed;
     Quaternion lookRot;
 
-    public bool canMove, idling, moving, running, sprinting, backstepping, rolling, strafeRoll, strafing, turning, canChain;
+    public bool canMove, idling, moving, running, sprinting, backstepping, rolling, strafeRoll, strafing, turning, canChain, falling, landing;
 
     public bool init = false;
-
-    Timer sprintTimer;
-    Timer idleTimer;
 
 
     void Awake(){
         properties = new MovementProperties();
         pDodge = GetComponent<PlayerDodge>();
         pA = GetComponent<PlayerAttack>();
-        //player = Game.control.player;
-    
+        rb = GetComponent<Rigidbody>();
+        inputQ = GetComponent<InputQueueing>();
+        moveInput = new Vector2();
+
         sprintTimer = new Timer(0.5f);
         idleTimer = new Timer(4f);
+ 
 
-        inputQ = GetComponent<InputQueueing>();
-        canMove = true;
-
-        moveInput = new Vector2();
         init = true;
+        canMove = true;
     }
 
     //////////////////////////////////////////
@@ -71,19 +72,16 @@ public class PlayerMovement : MonoBehaviour
         moving = moveInput.magnitude > 0;
 
         if(!rolling && !backstepping) canChain = false;
-
+        
         DetermineSprint();
         CheckIdling();
     }
 
     void FixedUpdate() {
-        
-        if(properties == null) properties = new MovementProperties();
+
         DetermineMoveSpeed();
 
-        if(pA.attacking) transform.position += transform.forward * moveSpeed * 10 * Time.deltaTime;
-
-        if (!strafing) { 
+        if (!strafing) {
             if(CanMove()) Move();
             if(CanRotate()) Rotate();
         }
@@ -91,26 +89,55 @@ public class PlayerMovement : MonoBehaviour
     }
 
     void Update(){
-        if(player == null && Game.control != null) player = Game.control.player;
+        
     }
 
     bool CanMove(){
         if(rolling) return false;
         if(backstepping) return false;
         if(pA.attacking) return false;
+       // if(falling) return false;
+        if(landing) return false;
         return true;
     }
 
     bool CanRotate(){
         if(rolling) return false;
+        if(landing) return false;
+        if(falling) return false;
+        if(Game.control.player.attack.attacking) return false;
         return true;
     }
 
     void Move(){
         CorrectDiagonal();
         moveDir = (Camera.main.gameObject.transform.right*moveInput.x) + (Vector3.Cross(Camera.main.gameObject.transform.right, Vector3.up) * moveInput.y );//normalized
+
+        if(falling) rb.drag = 0;
+        else rb.drag = 10;
+
+        if(InMiddleOfMovementAction()) return;
         transform.position += moveDir.normalized.magnitude * transform.forward * moveInput.magnitude * moveSpeed * Time.deltaTime;
+        ForceGravity();
     }
+
+    public void ForceGravity(){
+        bool downForce = true;
+
+        RaycastHit hit;
+        
+        if(Physics.Raycast(transform.position + new Vector3(0,1,0), transform.forward - transform.up, out hit, 1.35f)){
+            downForce = !(hit.collider.tag == "Ground");
+        }
+        if(downForce) {
+            rb.velocity = new Vector3(rb.velocity.x, -3f, rb.velocity.z);
+        }
+        else {
+            rb.velocity = new Vector3(rb.velocity.x, 0, rb.velocity.z) ;
+            rb.drag = 0;
+        }
+    }
+
 
     void CorrectDiagonal(){
         if(moveInput.magnitude > 1) {
@@ -130,7 +157,6 @@ public class PlayerMovement : MonoBehaviour
 
         if(moveDir.magnitude <= 0) lookRot = Quaternion.LookRotation(transform.forward);
         else lookRot = Quaternion.LookRotation(moveDir);
-       /// else lookRot.eulerAngles += new Vector3(0, Quaternion.LookRotation(moveDir).eulerAngles.y, 0);
         float turnS = 0;
         turnS = properties.turnSpeed * Time.deltaTime;
         transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, turnS);
@@ -142,7 +168,7 @@ public class PlayerMovement : MonoBehaviour
         
         if(moveDir.magnitude != 0) pDodge.StoreMoveDir(moveDir);
 
-        if(!sprintTimer.TimeOut() && Input.GetButtonUp("Roll")) {
+        if(Game.control.player.resources.CanExecute("Roll") && !sprintTimer.TimeOut() && Input.GetButtonUp("Roll")) {
             sprintTimer.Reset();
             if(InMiddleOfMovementAction()) inputQ.QueueInput("Roll");
             else {
@@ -155,28 +181,38 @@ public class PlayerMovement : MonoBehaviour
         }
         if(sprintTimer.TimeOut()) {
             sprinting = Input.GetButton("Sprint");
-            if(!sprinting) sprintTimer.Reset();
+            if(sprinting) {
+                Game.control.player.resources.SprintStaminaDrain(true);
+                 running = false;
+                 Game.control.player.animator.SetBool("Running", false);
+            }
+            if(!sprinting) {
+                Game.control.player.resources.SprintStaminaDrain(false);
+                sprintTimer.Reset();
+            }
         }
     }
 
     public bool InMiddleOfMovementAction(){
         if(rolling) return true;
         if(backstepping) return true;
+        if(falling) return true;
+        if(landing) return true;
         return false;
     }
 
+
+
     void DetermineMoveSpeed(){
-        //if(InMiddleOfMovementAction()) return;
+        if(InMiddleOfMovementAction()) return;
 
         float speed = moveInput.magnitude;
         running = speed >= properties.runThreshold;
         if(running) moveSpeed = properties.runSpeed;
-        if(sprinting) moveSpeed = properties.sprintSpeed;
-        if(pA.attacking) moveSpeed = Game.control.player.animator.GetFloat("MoveSpeed");
+        else if(sprinting) moveSpeed = properties.sprintSpeed;
+        else if(pA.attacking) moveSpeed = Game.control.player.animator.GetFloat("MoveSpeed");
+        else if(landing) moveSpeed =  Game.control.player.animator.GetFloat("MoveSpeed");
 
-
-        Debug.Log(GetComponent<Rigidbody>().velocity);
-        
         if(player != null && !pA.attacking && player.pTarget.strafeTarget != null){
             Vector3 playerDistanceVector = (transform.position - player.pTarget.strafeTarget.position);
             float playerDistanceToEnemy = playerDistanceVector.magnitude;
@@ -192,8 +228,8 @@ public class PlayerMovement : MonoBehaviour
     void CheckRestraints(){
         if(moveInput.magnitude == 0) Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
         else {
-            if(player.attack.attacking) Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
-            else Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            //if(player.attack.attacking) Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
+            Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         }
         if(moveInput.magnitude > 0 && !player.attack.attacking) Game.control.player.rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
     }
@@ -208,6 +244,8 @@ public class PlayerMovement : MonoBehaviour
             if(idleTimer.TimeOut()) {
                 idling = true;
                 Game.control.player.Animate("Idling", true);
+                if(Game.control.player.animator.GetBool("Landing") == true)
+                    Game.control.player.Animate("Landing", false);
             }
         }
         else if(idling && Input.anyKeyDown || moveInput.magnitude > 0){

@@ -30,6 +30,10 @@ public class PlayerAttack : MonoBehaviour
         return false;
     }
 
+    void FixedUpdate(){
+        if(attacking) ForcedAttackMovement();
+    }
+
     void LateUpdate(){
         if(player == null && Game.control != null) player = Game.control.player;
         if(m == null) m = player.movement;
@@ -46,53 +50,29 @@ public class PlayerAttack : MonoBehaviour
             Game.control.player.animator.ResetTrigger("LightLightCombo");
         }
 
-        if(m.InMiddleOfMovementAction()){
-            if(Input.GetButtonDown("LightAttack")) 
-                inputQ.QueueInput("RollAttack");
-            else if(HeavyInput()) {
-                inputQ.QueueInput("HeavyAttack");
+        if(Game.control.player.resources.CanExecute("LightAttack") || Game.control.player.resources.CanExecute("HeavyAttack")){
+            if(m.InMiddleOfMovementAction()){
+                if(Input.GetButtonDown("LightAttack")) 
+                    inputQ.QueueInput("RollAttack");
+                else if(HeavyInput()) {
+                    inputQ.QueueInput("HeavyAttack");
+                }
+            }
+            else if(Game.control.player.resources.CanExecute("LightAttack") && InMiddleOfCombatAction()) {
+                if(Input.GetButtonDown("LightAttack")){
+                    if(canCombo) ComboAttack();
+                    else inputQ.QueueInput("ComboAttack");
+                }
+                else if(HeavyInput()){
+                    if(canCombo) Attack("HeavyAttack");
+                    else inputQ.QueueInput("HeavyAttack");
+                }
+            }
+            else if(!attacking){
+                if(Input.GetButtonDown("LightAttack")) Attack("LightAttack");
+                else if(HeavyInput()) Attack("HeavyAttack");
             }
         }
-        else if(InMiddleOfCombatAction()) {
-            if(Input.GetButtonDown("LightAttack")){
-                if(canCombo) ComboAttack();
-                else inputQ.QueueInput("ComboAttack");
-            }
-            else if(HeavyInput()){
-                if(canCombo) HeavyAttack();
-                else inputQ.QueueInput("HeavyAttack");
-            }
-        }
-        else if(!attacking){
-            if(Input.GetButtonDown("LightAttack")) LightAttack();
-            else if(HeavyInput()) HeavyAttack();
-        }
-
-/*
-        if(Input.GetButtonDown("LightAttack")){
-            if(m.InMiddleOfMovementAction())  inputQ.QueueInput("RollAttack");
-            else if(InMiddleOfCombatAction()) {
-                if(canCombo) ComboAttack();
-                else inputQ.QueueInput("ComboAttack");
-            }
-            else if(!attacking) LightAttack();
-        }
-        else if(!heavyAxisTimer.Ticking() && Input.GetAxis("HeavyAttack") > 0){
-            heavyAxisTimer.Start();
-            if(m.InMiddleOfMovementAction())  {
-                Debug.Log("inmiddleofmovement");
-                inputQ.QueueInput("HeavyAttack");
-            }
-            else if(InMiddleOfCombatAction()) {
-                Debug.Log("inmiddleofcombat");
-                if(canCombo) HeavyAttack();
-                else inputQ.QueueInput("HeavyAttack");
-            }
-            else if(!attacking) {
-                Debug.Log("not attacking");
-                HeavyAttack();
-            }
-        }*/
     }
 
     public bool CanChain(){
@@ -101,7 +81,7 @@ public class PlayerAttack : MonoBehaviour
     }
 
     void ComboAttack(){
-      //  Debug.Log("comboattack");
+        Game.control.player.resources.UseStaminaForAction("LightAttack");
         player.Animate(combo);
         attacking = true;
         middleOfCombo = true;
@@ -126,25 +106,22 @@ public class PlayerAttack : MonoBehaviour
         if(!m.InMiddleOfMovementAction()){
             string nextAction = inputQ.CheckQueue();
             if(nextAction == "LightAttack") {
-                LightAttack();
+                Attack("LightAttack");
                 m.inputQ.ClearQueue();
             }
-            if(InMiddleOfCombatAction() && canCombo){
+            if(Game.control.player.resources.CanExecute("HeavyAttack") && InMiddleOfCombatAction() && canCombo){
                 if(nextAction == "HeavyAttack"){
-                    HeavyAttack();
+                    Attack("HeavyAttack");
                     m.inputQ.ClearQueue();
                 }
             }
         }
         else if(m.canChain){
-            if(inputQ.CheckQueue() == "RollAttack"){
-         //       Debug.Log("rollattack");
+            if(Game.control.player.resources.CanExecute("LightAttack") && inputQ.CheckQueue() == "RollAttack"){
                 RollAttack();
                 m.inputQ.ClearQueue();
             }
-           
         }
-        
     }
 
 
@@ -162,21 +139,38 @@ public class PlayerAttack : MonoBehaviour
 
 
     void RollAttack(){
+        Game.control.player.resources.UseStaminaForAction("LightAttack");
         player.Animate("RollAttack");
         attacking = true;
     }
 
+    void Attack(string weight){
+       // if(m.strafing) transform.rotation = Quaternion.LookRotation(transform.forward);
+        Game.control.player.resources.UseStaminaForAction(weight);
+        player.Animate(weight);
+        attacking = true;
+    }
+
+    void ForcedAttackMovement(){
+       m.moveSpeed = Game.control.player.animator.GetFloat("MoveSpeed") * m.properties.rollSpeed * 2;
+       if(m.moveDir.magnitude != 0) transform.rotation = Quaternion.LookRotation(m.moveDir);
+       if(Game.control.player.movement.groundDetect.grounded) GetComponent<Rigidbody>().velocity = transform.forward * m.moveSpeed;
+       else GetComponent<Rigidbody>().velocity = transform.forward * m.moveSpeed / 3;
+       m.ForceGravity();
+    }
+
+/*
     void LightAttack(){
+        Game.control.player.resources.UseStamina("LightAttack");
         player.Animate("LightAttack");
         attacking = true;
     }
 
     void HeavyAttack(){
-        Debug.Log("here");
-     //   m.canChain = false;
+        Game.control.player.resources.UseStamina("HeavyAttack");
         player.Animate("HeavyAttack");
         attacking = true;
-    }
+    }*/
 
     public void EndAttack(){
         attacking = false;

@@ -22,12 +22,8 @@ public class PlayerHandler : MonoBehaviour
 
     public Transform cameraT;
     
-
     public PlayerStats stats;
     
-    void Awake(){
-        
-    }
 
     public void Init(){
         rb = GetComponent<Rigidbody>();
@@ -38,16 +34,14 @@ public class PlayerHandler : MonoBehaviour
         resources = GetComponentInChildren<PlayerResources>();
         stats = new PlayerStats();
 
+        movement.player = this;
+
         resources.Init();
     }
 
     public void TargetEnemy(bool toggle, Transform target){
         if(!toggle) pTarget.ReleaseTarget();
         else        pTarget.TargetEnemy(target);
-    }
-
-    public void ReleaseTarget(){
-        
     }
 
     public bool EnemiesInRange(){

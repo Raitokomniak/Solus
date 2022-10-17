@@ -18,13 +18,21 @@ public class PlayerDodge : MonoBehaviour
     void FixedUpdate(){
         if      (m.rolling)      ForcedRollMovement();
         if (m.backstepping) ForcedBackStepMovement();
+
+        if(a.attacking){
+            m.rolling = false;
+            m.backstepping = false;
+        }
+
+        if(!m.groundDetect.grounded && m.backstepping) EndBackStep();
     }
+    
 
     void LateUpdate(){
 
         CheckNextAction();
 
-        if(!m.moving && Input.GetButtonDown("Backstep")) {
+        if(Game.control.player.resources.CanExecute("Backstep") && !m.moving && Input.GetButtonDown("Backstep")) {
             if(m.InMiddleOfMovementAction()  && !m.canChain)
                 m.inputQ.QueueInput("Backstep");
             else if(m.InMiddleOfMovementAction() && m.canChain)
@@ -72,6 +80,7 @@ public class PlayerDodge : MonoBehaviour
 
     public void StartRoll(Vector2 moveInput){
 //        Debug.Log("startroll");
+        Game.control.player.resources.UseStaminaForAction("Roll");
         if(a.attacking) a.attacking = false;
         a.canCombo = false;
 
@@ -93,7 +102,12 @@ public class PlayerDodge : MonoBehaviour
     void ForcedRollMovement(){
        m.moveSpeed = Game.control.player.animator.GetFloat("RollSpeed") * m.properties.rollSpeed * 2;
        transform.rotation = Quaternion.LookRotation(m.moveDir);
-       transform.position += rollMoveDir * m.moveSpeed * Time.deltaTime;
+       //transform.position += rollMoveDir * m.moveSpeed * Time.deltaTime;
+       //GetComponent<Rigidbody>().velocity = rollMoveDir * m.moveSpeed;
+       if(Game.control.player.movement.groundDetect.grounded) GetComponent<Rigidbody>().velocity = transform.forward * m.moveSpeed;
+       else GetComponent<Rigidbody>().velocity = transform.forward * m.moveSpeed / 3;
+
+       m.ForceGravity();
     }
 
 
@@ -119,6 +133,7 @@ public class PlayerDodge : MonoBehaviour
     //////////////////////////////////////////
 
     void StartBackStep(){
+        Game.control.player.resources.UseStaminaForAction("Backstep");
         if(a.attacking) a.attacking = false;
         a.canCombo = false;
 
@@ -136,7 +151,9 @@ public class PlayerDodge : MonoBehaviour
     
     void ForcedBackStepMovement(){
         m.moveSpeed = Game.control.player.animator.GetFloat("BackstepSpeed") * m.properties.backstepSpeed;
-        transform.position -= transform.forward * m.moveSpeed * Time.deltaTime;
+        //transform.position -= transform.forward * m.moveSpeed * Time.deltaTime;
+        GetComponent<Rigidbody>().velocity = -(transform.forward * m.moveSpeed);
+        m.ForceGravity();
     }
 
     public void StartLightAttackMovement(){

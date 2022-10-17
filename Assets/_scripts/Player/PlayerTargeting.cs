@@ -13,7 +13,7 @@ public class PlayerTargeting : MonoBehaviour
 
     void FixedUpdate(){
         if(!m.init) return;
-        if(m.strafing) Strafe();
+        if(m.strafing && CanStrafe()) Strafe();
         
 
     }
@@ -25,6 +25,7 @@ public class PlayerTargeting : MonoBehaviour
         if(!Game.control.cam.targeting) return false;
         if(m.rolling) return false;
         if(m.backstepping) return false;
+        if(Game.control.player.attack.attacking) return false;
         return true;
     }
 

@@ -13,7 +13,7 @@ public class PlayerTurnAnimation : MonoBehaviour
 
     void FixedUpdate(){
        DetermineTurnAnimation();
-       if(m.turning) m.moveSpeed = m.player.animator.GetFloat("TurnSpeed") * 5;
+      // if(m.turning) m.moveSpeed = m.player.animator.GetFloat("TurnSpeed") * 5;
     }
 
     void CheckTurn(){
@@ -37,7 +37,7 @@ public class PlayerTurnAnimation : MonoBehaviour
     }
 
     void Turn(){
-        m.player.Animate("Turning", true);
+        //m.player.Animate("Turning", true);
         Game.control.player.Animate("Turn180Run");
         m.turning = true;
     }
@@ -45,7 +45,7 @@ public class PlayerTurnAnimation : MonoBehaviour
     public void EndTurn(){
         m.turning = false;
         m.running = m.moveInput.magnitude > 0;
-        m.player.Animate("Turning", false);
+        //m.player.Animate("Turning", false);
     }
 
 }

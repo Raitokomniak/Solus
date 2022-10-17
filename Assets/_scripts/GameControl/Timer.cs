@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class Timer {
     float cap;
-    float count = 0;
+    public float count = 0;
     bool timerOn;
 
     public Timer(float cap){
